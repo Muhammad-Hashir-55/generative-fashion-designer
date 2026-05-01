@@ -1,0 +1,235 @@
+AI-341 |  Deep Neural Networks  |  GIK Institute of Engineering Sciences and Technology 
+Project Proposal 
+Generative Fashion Designer 
+for Pakistani Textiles 
+Generative AI  Cultural + Commercial + Creative 
+Team Members Hashir | Zain 
+Department Faculty of Computer Science and Engineering (FCSE) 
+Course AI-341 — Deep Neural Networks 
+Submission Date April 2026 
+ 
+1. Abstract 
+Pakistan's textile industry is one of the largest in the world, contributing over 60% of the country's total 
+export earnings. Despite this, textile designers rely heavily on manual sketch -and-iterate workflows that 
+are slow, expensive, and difficult to scale. This project proposes a Generative Fashion Designer system 
+powered by fine -tuned diffusion models and neural style transfer to automate the rapid prototyping of 
+traditional Pakistani textile patterns — including Ajrak, Khaddar, Phulkari, Sindhi block prints, and Balochi 
+embroidery. Using prompt -based customization via CLIP text encoders and a curated domain -specific 
+dataset, the system will enable fashion houses, SMEs, and e-commerce brands to generate high-fidelity, 
+culturally authentic textile designs  on demand. The project directly integrates core DNN concepts — 
+convolutional feature extraction, attention mechanisms, diffusion -based generation, and perceptual loss 
+optimization — making it both academically rigorous and commercially viable. 
+2. Problem Statement 
+Pakistani textile designers face three critical bottlenecks in their current workflow:  
+• Slow Prototyping: Creating a single new pattern design requires a skilled artisan 3-7 days of 
+manual effort — from concept sketching to sample weaving. This makes rapid trend-responsive 
+design economically infeasible for most SMEs. 
+• Loss of Cultural Heritage: Many traditional patterns (Sindhi Rilli, Balochi mirror-work, Multani tile 
+motifs) are undocumented and at risk of being lost as master artisans age without successors who 
+can preserve the visual vocabulary. 
+• No Scalable Customization Layer: Buyers and fashion houses cannot interactively request 
+pattern variations (color palette swaps, motif density changes, fusion with modern aesthetics) 
+without commissioning entirely new designs at high cost. 
+These gaps represent an unmet need at the intersection of AI, design, and Pakistan's multi-billion dollar 
+textile export economy. 
+3. Proposed Solution 
+We propose a three-component AI pipeline that transforms a text prompt (and optionally a reference 
+image) into a photorealistic, print-ready Pakistani textile pattern: 
+Component Technology Role 
+Pattern 
+Generator  
+Generates 
+base textile 
+pattern from 
+text prompt 
+Style  Transfer 
+Module 
+Neural  Style  Transfer  (VGG-19 
+perceptual loss) 
+Applies cultural 
+visual style 
+onto generated 
+base 
+Prompt Interface CLIP text encoder + LoRA adapters 
+Maps natural 
+language to 
+visual pattern 
+semantics 
+4. Technical Architecture 
+4.1 Dataset Construction 
+A domain-specific dataset is central to the project's cultural authenticity. We will assemble a curated 
+corpus from three sources: 
+• Web scraping: High-resolution images of Pakistani textile patterns from commercial platforms 
+(Khaadi, Gul Ahmed, Alkaram), government craft archives (Pakistan Craft Council), and museum 
+databases. 
+• Manual collection: Original photographs of artisan samples from local bazaars in Lahore, 
+Karachi, and Hyderabad — covering Ajrak stamps, Sindhi Rilli patchwork, Phulkari embroidery, and 
+Balochi mirrors. 
+• Augmentation: Controlled augmentations — rotation, tiling, hue-shift within culturally plausible 
+ranges — to expand the dataset without introducing non-authentic patterns. 
+Each image will be paired with a structured text caption (e.g., 'Sindhi Ajrak geometric repeat pattern, 
+deep indigo and madder red, block print style') for text-conditioned fine-tuning. 
+4.2 Stable Diffusion Fine-tuning (Core DNN Component) 
+The base model is Stable Diffusion v1.5 (or SDXL for higher resolution). Fine-tuning will use two 
+complementary strategies: 
+• DreamBooth: Subject-driven fine-tuning that teaches the model specific Pakistani pattern 
+identifiers as unique tokens (e.g., ) so they can be reliably invoked at inference.  
+• LoRA (Low-Rank Adaptation): Lightweight adapter matrices injected into the UNet's cross-
+attention layers, allowing efficient fine-tuning on limited GPU memory while preserving the base 
+model's generalization capability. LoRA reduces trainable parameters by ~99% compared to full 
+fine-tuning. 
+Fine-tuned Stable Diffusion v1.5 / 
+SDXL 
+The UNet backbone consists of ResNet-style residual blocks interleaved with Transformer-based 
+spatial attention, operating on a 64x64 latent space (decoded to 512x512 or 1024x1024 pixels via a 
+VAE). 
+Training objective: minimize the denoising score-matching loss on the curated dataset. 
+4.3 Neural Style Transfer Module 
+Style transfer serves as a post-processing and refinement layer. A user can provide a reference image of 
+an existing textile (e.g., a scanned Ajrak swatch), and the system will transfer its visual texture and motif 
+structure onto a freshly generated base pattern. 
+Architecture: Pre-trained VGG-19 extracts content features (layers conv4_2) and style features (Gram 
+matrices of conv1_1, conv2_1, conv3_1, conv4_1, conv5_1). Optimization minimizes the weighted sum 
+of content loss and style loss via L-BFGS: 
+L_total = α · L_content + β · L_style 
+where α and β are content-style tradeoff weights tunable per design requirement. This gives designers 
+fine-grained control: high α preserves the generated structure, high β imposes the reference texture more 
+aggressively. 
+4.4 Prompt-Based Customization via CLIP 
+The user interaction layer is built around OpenAI's CLIP (Contrastive Language-Image Pretraining) text 
+encoder, which maps natural language descriptions into the same embedding space as visual features.  
+This enables intuitive queries such as: 
+• "Generate a Phulkari-style shawl pattern with golden and maroon threads on black silk" 
+• "Create a geometric Sindhi tile repeat for men's khaddar kurta, earth tones" 
+• "Blend Ajrak block-print motifs with contemporary minimalist white space" 
+LoRA adapters bridge the CLIP text encoder's general -purpose embeddings to the fine -tuned domain 
+vocabulary, ensuring that cultural pattern names in the prompt reliably activate the correct visual 
+semantics in the diffusion UNet's cross-attention layers. 
+5. End-to-End System Pipeline 
+# Stage Description 
+Step 1 User Input Text prompt + optional reference image uploaded via Streamlit web 
+UI 
+Step 2 Text Encoding CLIP encoder + LoRA adapter maps prompt to conditioning 
+embedding 
+Step 3 Diffusion Sampling Fine-tuned UNet iteratively denoises latent over T=50 DDIM steps 
+Step 4 VAE Decoding Latent decoded to 512x512 (or 1024x1024) high-res RGB pattern 
+image 
+Step 5 Style Transfer Optional: VGG -19 NST blends reference swatch style onto 
+generated image 
+Step 6 Output Download print-ready PNG/TIFF + metadata (prompt, seed, style 
+weights) 
+6. Deep Learning Concepts Demonstrated 
+This project integrates a broad range of DNN concepts covered in the AI-391L curriculum: 
+Concept Application in Project 
+Convolutional Neural Networks VGG-19 feature extraction for style transfer perceptual loss 
+Attention Mechanisms Transformer-based spatial self-attention and cross-attention in 
+diffusion UNet 
+Variational Autoencoders Latent diffusion's encoder-decoder for compressing pixel 
+space 
+Contrastive Learning CLIP trained with InfoNCE loss for multimodal text-image 
+alignment 
+Score-Based Generative Models DDPM/DDIM denoising score matching as the core 
+generation objective 
+Transfer Learning / Fine-tuning DreamBooth + LoRA adapters for domain adaptation 
+Perceptual Loss Functions Gram matrix style loss and content loss in NST 
+Residual Networks ResNet blocks within the diffusion UNet's encoder -decoder 
+path 
+7. Implementation Plan & Timeline 
+Timeline Phase Deliverables 
+Week 1-2 Dataset Collection Web scraping, manual photography, annotation, CLIP 
+captioning 
+Week 3 Data Preprocessing Resizing to 512x512, augmentation pipeline, train/val/test 
+split 
+Week 4-5 SD Fine-tuning DreamBooth + LoRA training on curated dataset (Google 
+Colab A100 / Kaggle) 
+Week 6 NST Module VGG-19 style transfer implementation, hyperparameter 
+tuning (α, β) 
+Week 7 CLIP Integration Prompt engineering, LoRA adapter training for text-image 
+alignment 
+Week 8 UI Development Streamlit frontend for prompt input, image upload, and result 
+download 
+Week 9 Evaluation FID score, CLIP similarity, user study with 5 design 
+professionals 
+Week 10 Report & Demo Final writeup, video demo, GitHub repository with 
+reproducibility docs 
+8. Evaluation Metrics 
+Metric Type Description & Target 
+Frechet Inception Distance 
+(FID) 
+Quantitative 
+Measures  distributional  similarity 
+ between generated and real textile 
+images. Target: FID < 30. 
+CLIP Similarity Score Quantitative Cosine similarity between CLIP embeddings of 
+prompt and generated image. Target: > 0.28. 
+Style Loss Value Quantitative Gram matrix style loss post-transfer vs. reference 
+swatch. Lower is better. 
+Design Professional Survey Qualitative 5-point Likert scale on authenticity, aesthetic 
+quality, and usability. Target: > 4.0/5. 
+Inference Latency Efficiency Time to generate one 512x512 pattern (DDIM 50 
+steps). Target: < 10 seconds on T4 GPU. 
+9. Tools, Frameworks & Infrastructure 
+Base Model Stable Diffusion v1.5 / SDXL (HuggingFace Diffusers) 
+Fine-tuning 
+ 
+Style Transfer PyTorch — custom VGG-19 NST implementation 
+CLIP 
+ 
+Training Compute Google Colab Pro (A100 40GB) or Kaggle TPU v3-8 (free tier) 
+Frontend 
+ 
+Experiment Tracking Weights & Biases (wandb) for loss curves and FID logging 
+Version Control 
+ 
+Language Python 3.10 — PyTorch 2.x, Diffusers 0.27, Transformers 4.x 
+10. Expected Outcomes 
+• Fine-tuned diffusion model capable of generating high-fidelity, culturally authentic Pakistani 
+textile patterns from natural language prompts with FID < 30. 
+• Neural Style Transfer module that allows blending any reference textile swatch into a newly 
+generated design with controllable content-style tradeoff. 
+• Interactive Streamlit application deployable on HuggingFace Spaces, providing a publicly 
+accessible demo for fashion designers and industry stakeholders. 
+• Curated dataset of 2,000-5,000 labeled Pakistani textile images — a standalone contribution to 
+the research community given the current absence of such a resource. 
+DreamBooth, LoRA via HuggingFace PEFT + Diffusers train scripts 
+openai/clip-vit-base-patch32 via HuggingFace Transformers 
+Streamlit — prompt input, slider controls for  
+α 
+/ 
+β 
+, image download 
+GitHub with GitHub Actions CI for automated FID benchmark checks 
+• Comprehensive technical report covering dataset curation methodology, training details, 
+ablation studies on LoRA rank and DreamBooth steps, and evaluation results. 
+11. Why This Project Wins 
+Cultural Commercial Academic 
+Preserves  and  digitizes 
+Pakistan's textile heritage — 
+Ajrak, Phulkari, Sindhi Rilli — 
+using AI as a cultural 
+preservation tool. 
+Directly addresses a $19B 
+industry pain point. 
+Commercially deployable as a 
+SaaS product for fashion 
+houses, SMEs, and e -
+commerce platforms. 
+Integrates 8+ core DNN 
+concepts in one coherent 
+pipeline: CNNs, VAEs, 
+diffusion models, attention, 
+CLIP, perceptual loss, LoRA, 
+and fine-tuning. 
+ 
+References 
+[1] Ho, J., Jain, A., & Abbeel, P . (2020). Denoising Diffusion Probabilistic Models. NeurIPS. 
+[2] Rombach, R., et al. (2022). High-Resolution Image Synthesis with Latent Diffusion Models. CVPR. 
+[3] Gatys, L. A., Ecker, A. S., & Bethge, M. (2016). A Neural Algorithm of Artistic Style. CVPR. 
+[4] Ruiz, N., et al. (2023). DreamBooth: Fine Tuning Text-to-Image Diffusion Models for Subject-Driven Generation. 
+CVPR. 
+[5] Hu, E. J., et al. (2022). LoRA: Low-Rank Adaptation of Large Language Models. ICLR. 
+[6] Radford, A., et al. (2021). Learning Transferable Visual Models From Natural Language Supervision (CLIP). 
+ICML. 
+[7] Song, J., et al. (2021). Denoising Diffusion Implicit Models (DDIM). ICLR. 
+[8] Simonyan, K., & Zisserman, A. (2015). Very Deep Convolutional Networks for Large-Scale Image 
+Recognition(VGG-19). ICLR. 
