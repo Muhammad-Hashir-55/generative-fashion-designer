@@ -53,6 +53,10 @@ class WGANTrainer(BaseTrainer):
         g_p = sum(p.numel() for p in self.generator.parameters())
         c_p = sum(p.numel() for p in self.critic.parameters())
         self.logger.info(f"Generator: {g_p:,} | Critic: {c_p:,}")
+        # WGAN-GP is sensitive to AMP scaler ordering on alternating optimizer steps.
+        # Keep the model on GPU, but run this trainer in full precision.
+        self.amp_enabled = False
+        self.scaler = None
 
     def train_epoch(self, dataloader: DataLoader) -> dict[str, float]:
         self.generator.train()
@@ -76,17 +80,24 @@ class WGANTrainer(BaseTrainer):
                 bs = images.size(0)
 
                 z = torch.randn(bs, self.latent_dim, device=self.device)
-                fake = self.generator(z).detach()
+                with self.autocast():
+                    fake = self.generator(z).detach()
 
-                c_real = self.critic(images).mean()
-                c_fake = self.critic(fake).mean()
+                with self.autocast():
+                    c_real = self.critic(images).mean()
+                    c_fake = self.critic(fake).mean()
                 gp = compute_gradient_penalty(
                     self.critic, images, fake, self.device, self.lambda_gp)
 
                 c_loss = c_fake - c_real + gp
                 self.opt_c.zero_grad()
-                c_loss.backward()
-                self.opt_c.step()
+                self.backward_step(
+                    c_loss,
+                    self.opt_c,
+                    clip_params=self.critic.parameters(),
+                    clip_value=self.config.training.gradient_clip,
+                    scaler_update=False,
+                )
 
                 w_dist = (c_real - c_fake).item()
                 c_total += c_loss.item()
@@ -96,14 +107,18 @@ class WGANTrainer(BaseTrainer):
 
             # ── Train Generator ──────────────────────────────────
             z = torch.randn(images.size(0), self.latent_dim, device=self.device)
-            fake = self.generator(z)
-            g_loss = -self.critic(fake).mean()
+            with self.autocast():
+                fake = self.generator(z)
+                g_loss = -self.critic(fake).mean()
 
             self.opt_g.zero_grad()
-            g_loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.generator.parameters(),
-                                           self.config.training.gradient_clip)
-            self.opt_g.step()
+            self.backward_step(
+                g_loss,
+                self.opt_g,
+                clip_params=self.generator.parameters(),
+                clip_value=self.config.training.gradient_clip,
+                scaler_update=True,
+            )
 
             g_total += g_loss.item()
             n_g += 1
@@ -124,9 +139,10 @@ class WGANTrainer(BaseTrainer):
         n = 0
         for images, _ in dataloader:
             images = images.to(self.device)
-            z = torch.randn(images.size(0), self.latent_dim, device=self.device)
-            fake = self.generator(z)
-            w = (self.critic(images).mean() - self.critic(fake).mean()).item()
+            with self.autocast(enabled=False):
+                z = torch.randn(images.size(0), self.latent_dim, device=self.device)
+                fake = self.generator(z)
+                w = (self.critic(images).mean() - self.critic(fake).mean()).item()
             w_total += w
             n += 1
         return {"w_dist": w_total / max(n, 1)}

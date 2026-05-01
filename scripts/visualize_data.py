@@ -1,7 +1,8 @@
 """
 Dataset Visualization Script
 ==============================
-Visualize Fashion-MNIST samples, class distributions, and augmentation effects.
+Visualize Describable Textures Dataset (DTD) samples, class distributions,
+and augmentation effects for the Generative Fashion Designer project.
 
 Usage:
     python scripts/visualize_data.py
@@ -16,56 +17,91 @@ import torch
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 import numpy as np
+from torchvision.datasets import DTD
 
 from src.utils.config import load_config
-from src.data.dataset import FashionDesignerDataset, FASHION_CLASSES
+from src.data.dataset import FashionDesignerDataset, get_class_names
 from src.data.augmentation import TrainAugmentation, EvalAugmentation, GANAugmentation
+
+
+def denormalize(tensor: torch.Tensor) -> np.ndarray:
+    """Denormalize an RGB tensor for plotting.
+
+    Supports two common normalizations:
+    - GAN-style: tensor in [-1, 1] -> map to [0, 1]
+    - ImageNet-style: (x - mean) / std -> invert to [0, 1]
+    """
+    t = tensor.detach().cpu()
+    img = t.squeeze().numpy()
+    if img.ndim == 3:
+        img = np.transpose(img, (1, 2, 0))
+
+    # Heuristic: if values are already in [-1, 1], assume GAN normalization
+    if t.min() >= -1.01 and t.max() <= 1.01:
+        img = (img + 1.0) / 2.0
+        return np.clip(img, 0, 1)
+
+    # Otherwise assume ImageNet normalization
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+    img = (img * std) + mean
+    return np.clip(img, 0, 1)
 
 
 def main():
     config = load_config()
     output_dir = Path(getattr(config.paths, "evaluation_dir", "./outputs/evaluation"))
     output_dir.mkdir(parents=True, exist_ok=True)
-
     plt.style.use("dark_background")
 
-    # ── 1. Raw Dataset Samples ────────────────────────────────────────────
-    print("Loading Fashion-MNIST dataset...")
+    print("Loading Describable Textures Dataset (DTD)...")
     raw_dataset = FashionDesignerDataset(
         root=getattr(config.data, "data_dir", "./data"),
-        train=True,
+        split="train",
         transform=EvalAugmentation(config.data.image_size),
         download=True,
     )
+    classes = get_class_names(getattr(config.data, "data_dir", "./data"))
     print(f"  Training set size: {len(raw_dataset):,}")
-    print(f"  Classes: {FASHION_CLASSES}")
+    print(f"  Total Classes: {len(classes)}")
 
-    # Plot 10 × 10 grid (one row per class)
-    fig, axes = plt.subplots(10, 10, figsize=(15, 15))
-    class_indices = {i: [] for i in range(10)}
+    # ── 1. Raw Dataset Samples ────────────────────────────────────────────
+    # Plot 10 rows for 10 selected pattern-like classes
+    selected_classes = [
+        "paisley", "woven", "interlaced", "knitted", "zigzag",
+        "banded", "chequered", "grid", "polka-dotted", "marbled"
+    ]
+    # Filter to only existing classes to avoid errors
+    selected_classes = [c for c in selected_classes if c in classes]
+    
+    num_classes_to_plot = min(len(selected_classes), 10)
+    fig, axes = plt.subplots(num_classes_to_plot, 10, figsize=(15, 1.5 * num_classes_to_plot))
+    
+    class_indices = {classes.index(c): [] for c in selected_classes[:num_classes_to_plot]}
+    
     for idx in range(len(raw_dataset)):
         _, label = raw_dataset[idx]
         if isinstance(label, torch.Tensor):
             label = label.item()
-        if len(class_indices[label]) < 10:
+        if label in class_indices and len(class_indices[label]) < 10:
             class_indices[label].append(idx)
         if all(len(v) >= 10 for v in class_indices.values()):
             break
 
-    for row in range(10):
+    for row, c_name in enumerate(selected_classes[:num_classes_to_plot]):
+        c_idx = classes.index(c_name)
         for col in range(10):
-            idx = class_indices[row][col]
-            img, _ = raw_dataset[idx]
-            img_np = img.squeeze().numpy()
-            img_np = (img_np + 1) / 2  # denormalize
-            axes[row][col].imshow(img_np, cmap="gray", vmin=0, vmax=1)
+            if col < len(class_indices[c_idx]):
+                idx = class_indices[c_idx][col]
+                img, _ = raw_dataset[idx]
+                img_np = denormalize(img)
+                axes[row][col].imshow(img_np)
             axes[row][col].axis("off")
-        axes[row][0].set_ylabel(FASHION_CLASSES[row], fontsize=9,
-                                 rotation=0, labelpad=70, va="center")
+        axes[row][0].set_ylabel(c_name, fontsize=10, rotation=0, labelpad=50, va="center")
 
-    fig.suptitle("Fashion-MNIST — All 10 Classes", fontsize=16, fontweight="bold", y=1.01)
+    fig.suptitle("Describable Textures Dataset (DTD) — Selected Pattern Classes", 
+                 fontsize=16, fontweight="bold", y=1.02)
     plt.tight_layout()
     path = output_dir / "dataset_samples.png"
     fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
@@ -73,19 +109,15 @@ def main():
     print(f"  Saved class samples to {path}")
 
     # ── 2. Class Distribution ─────────────────────────────────────────────
-    targets = raw_dataset.targets
-    counts = [targets.count(i) for i in range(10)]
+    # Count distribution using raw targets
+    targets = [raw_dataset.dataset._labels[i] for i in range(len(raw_dataset))]
+    counts = [targets.count(i) for i in range(len(classes))]
 
-    fig, ax = plt.subplots(figsize=(12, 5))
-    colors = plt.cm.get_cmap("viridis", 10)
-    bars = ax.bar(FASHION_CLASSES, counts, color=[colors(i) for i in range(10)],
-                  edgecolor="white", linewidth=0.5)
-    ax.set_title("Class Distribution", fontsize=14, fontweight="bold")
+    fig, ax = plt.subplots(figsize=(16, 6))
+    ax.bar(classes, counts, color="#4ECDC4", edgecolor="white", linewidth=0.5)
+    ax.set_title("DTD Class Distribution (Train Split)", fontsize=14, fontweight="bold")
     ax.set_ylabel("Count", fontsize=12)
-    ax.tick_params(axis="x", rotation=45)
-    for bar, count in zip(bars, counts):
-        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 50,
-                str(count), ha="center", fontsize=9)
+    ax.tick_params(axis="x", rotation=90, labelsize=8)
     plt.tight_layout()
     path = output_dir / "class_distribution.png"
     fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
@@ -94,9 +126,7 @@ def main():
 
     # ── 3. Augmentation Comparison ────────────────────────────────────────
     print("  Generating augmentation comparison...")
-    from torchvision.datasets import FashionMNIST
-    raw = FashionMNIST(root=getattr(config.data, "data_dir", "./data"),
-                       train=True, download=True)
+    raw = DTD(root=getattr(config.data, "data_dir", "./data"), split="train", download=True)
     sample_img = raw[0][0]  # PIL Image
 
     aug_pipelines = {
@@ -108,13 +138,13 @@ def main():
     fig, axes = plt.subplots(3, 8, figsize=(16, 6))
     for row, (name, aug) in enumerate(aug_pipelines.items()):
         for col in range(8):
-            img = aug(sample_img).squeeze().numpy()
-            img = (img + 1) / 2
-            axes[row][col].imshow(img, cmap="gray", vmin=0, vmax=1)
+            img = aug(sample_img)
+            img_np = denormalize(img)
+            axes[row][col].imshow(img_np)
             axes[row][col].axis("off")
-        axes[row][0].set_ylabel(name, fontsize=11, rotation=0, labelpad=60, va="center")
+        axes[row][0].set_ylabel(name, fontsize=11, rotation=0, labelpad=50, va="center")
 
-    fig.suptitle("Augmentation Pipeline Comparison", fontsize=14, fontweight="bold", y=1.01)
+    fig.suptitle("RGB Augmentation Pipeline Comparison", fontsize=14, fontweight="bold", y=1.02)
     plt.tight_layout()
     path = output_dir / "augmentation_comparison.png"
     fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())

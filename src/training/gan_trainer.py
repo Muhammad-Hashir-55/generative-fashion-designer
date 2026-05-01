@@ -79,34 +79,49 @@ class GANTrainer(BaseTrainer):
 
             # ── Train Discriminator ───────────────────────────────────
             self.opt_d.zero_grad()
-            d_real = self.discriminator(images)
-            loss_d_real = self.criterion(d_real, real_label)
+            with self.autocast():
+                d_real = self.discriminator(images)
+            with self.autocast(enabled=False):
+                loss_d_real = self.criterion(d_real.float(), real_label.float())
 
             z = torch.randn(batch_size, self.latent_dim, device=self.device)
-            fake = self.generator(z).detach()
+            with self.autocast():
+                fake = self.generator(z).detach()
             if self.noise_injection > 0:
                 fake = fake + self.noise_injection * torch.randn_like(fake)
-            d_fake = self.discriminator(fake)
-            loss_d_fake = self.criterion(d_fake, fake_label)
+            with self.autocast():
+                d_fake = self.discriminator(fake)
+            with self.autocast(enabled=False):
+                loss_d_fake = self.criterion(d_fake.float(), fake_label.float())
 
             loss_d = (loss_d_real + loss_d_fake) / 2
-            loss_d.backward()
-            torch.nn.utils.clip_grad_norm_(self.discriminator.parameters(),
-                                           self.config.training.gradient_clip)
-            self.opt_d.step()
+            self.backward_step(
+                loss_d,
+                self.opt_d,
+                clip_params=self.discriminator.parameters(),
+                clip_value=self.config.training.gradient_clip,
+                scaler_update=False,
+            )
 
             d_acc = ((d_real > 0.5).float().mean() + (d_fake < 0.5).float().mean()) / 2
 
             # ── Train Generator ───────────────────────────────────────
             self.opt_g.zero_grad()
             z = torch.randn(batch_size, self.latent_dim, device=self.device)
-            fake = self.generator(z)
-            d_fake_for_g = self.discriminator(fake)
-            loss_g = self.criterion(d_fake_for_g, torch.ones(batch_size, 1, device=self.device))
-            loss_g.backward()
-            torch.nn.utils.clip_grad_norm_(self.generator.parameters(),
-                                           self.config.training.gradient_clip)
-            self.opt_g.step()
+            with self.autocast():
+                fake = self.generator(z)
+                d_fake_for_g = self.discriminator(fake)
+            with self.autocast(enabled=False):
+                loss_g = self.criterion(
+                    d_fake_for_g.float(), torch.ones(batch_size, 1, device=self.device).float()
+                )
+            self.backward_step(
+                loss_g,
+                self.opt_g,
+                clip_params=self.generator.parameters(),
+                clip_value=self.config.training.gradient_clip,
+                scaler_update=True,
+            )
 
             g_total += loss_g.item()
             d_total += loss_d.item()
@@ -124,12 +139,15 @@ class GANTrainer(BaseTrainer):
         n = 0
         for images, _ in dataloader:
             images = images.to(self.device)
-            d_real = self.discriminator(images)
-            z = torch.randn(images.size(0), self.latent_dim, device=self.device)
-            fake = self.generator(z)
-            d_fake = self.discriminator(fake)
-            d_loss = (self.criterion(d_real, torch.ones_like(d_real)) +
-                      self.criterion(d_fake, torch.zeros_like(d_fake))) / 2
+            with self.autocast(enabled=False):
+                d_real = self.discriminator(images)
+                z = torch.randn(images.size(0), self.latent_dim, device=self.device)
+                fake = self.generator(z)
+                d_fake = self.discriminator(fake)
+                d_loss = (
+                    self.criterion(d_real.float(), torch.ones_like(d_real).float()) +
+                    self.criterion(d_fake.float(), torch.zeros_like(d_fake).float())
+                ) / 2
             d_total += d_loss.item()
             n += 1
         return {"d_loss": d_total / n}

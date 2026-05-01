@@ -20,6 +20,7 @@ tqdm>=4.65
 
 # TensorBoard
 tensorboard>=2.14
+lightning>=2.3
 
 # Image processing
 Pillow>=10.0

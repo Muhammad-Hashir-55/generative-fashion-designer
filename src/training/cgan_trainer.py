@@ -76,26 +76,42 @@ class CGANTrainer(BaseTrainer):
 
             # ── Discriminator ──
             self.opt_d.zero_grad()
-            d_real = self.discriminator(images, labels)
-            loss_d_real = self.criterion(d_real, real_target)
+            with self.autocast():
+                d_real = self.discriminator(images, labels)
+            with self.autocast(enabled=False):
+                loss_d_real = self.criterion(d_real.float(), real_target.float())
 
             z = torch.randn(bs, self.latent_dim, device=self.device)
-            fake = self.generator(z, labels).detach()
-            d_fake = self.discriminator(fake, labels)
-            loss_d_fake = self.criterion(d_fake, fake_target)
+            with self.autocast():
+                fake = self.generator(z, labels).detach()
+                d_fake = self.discriminator(fake, labels)
+            with self.autocast(enabled=False):
+                loss_d_fake = self.criterion(d_fake.float(), fake_target.float())
 
             loss_d = (loss_d_real + loss_d_fake) / 2
-            loss_d.backward()
-            self.opt_d.step()
+            self.backward_step(
+                loss_d,
+                self.opt_d,
+                clip_params=self.discriminator.parameters(),
+                clip_value=self.config.training.gradient_clip,
+                scaler_update=False,
+            )
 
             # ── Generator ──
             self.opt_g.zero_grad()
             z = torch.randn(bs, self.latent_dim, device=self.device)
-            fake = self.generator(z, labels)
-            d_fake_g = self.discriminator(fake, labels)
-            loss_g = self.criterion(d_fake_g, torch.ones(bs, 1, device=self.device))
-            loss_g.backward()
-            self.opt_g.step()
+            with self.autocast():
+                fake = self.generator(z, labels)
+                d_fake_g = self.discriminator(fake, labels)
+            with self.autocast(enabled=False):
+                loss_g = self.criterion(d_fake_g.float(), torch.ones(bs, 1, device=self.device).float())
+            self.backward_step(
+                loss_g,
+                self.opt_g,
+                clip_params=self.generator.parameters(),
+                clip_value=self.config.training.gradient_clip,
+                scaler_update=True,
+            )
 
             g_total += loss_g.item()
             d_total += loss_d.item()
@@ -111,8 +127,9 @@ class CGANTrainer(BaseTrainer):
         n = 0
         for images, labels in dataloader:
             images, labels = images.to(self.device), labels.to(self.device)
-            d_real = self.discriminator(images, labels)
-            d_total += self.criterion(d_real, torch.ones_like(d_real)).item()
+            with self.autocast(enabled=False):
+                d_real = self.discriminator(images, labels)
+                d_total += self.criterion(d_real.float(), torch.ones_like(d_real).float()).item()
             n += 1
         return {"d_loss": d_total / n}
 

@@ -61,34 +61,44 @@ class FusionTrainer(BaseTrainer):
         for images, _ in tqdm(dataloader, desc="Train Fusion", leave=False):
             images = images.to(self.device)
 
-            # Forward pass
-            recon, mu, logvar = self.model(images)
+            with self.autocast():
+                # Forward pass for discriminator update
+                recon, mu, logvar = self.model(images)
+                d_real = self.model.discriminator(images)
+                d_fake = self.model.discriminator(recon.detach())
 
-            d_real = self.model.discriminator(images)
-            d_fake = self.model.discriminator(recon.detach())
-
-            losses = CVAEGANFusion.compute_losses(
-                recon, images, mu, logvar, d_real, d_fake,
-                self.recon_w, self.kl_w, self.adv_w)
+                losses = CVAEGANFusion.compute_losses(
+                    recon, images, mu, logvar, d_real, d_fake,
+                    self.recon_w, self.kl_w, self.adv_w)
 
             # ── Update Discriminator ──
             self.opt_d.zero_grad()
-            losses["d_loss"].backward(retain_graph=True)
-            self.opt_d.step()
+            self.backward_step(
+                losses["d_loss"],
+                self.opt_d,
+                clip_params=self.model.discriminator.parameters(),
+                clip_value=self.config.training.gradient_clip,
+                scaler_update=False,
+            )
 
             # ── Update Encoder + Decoder ──
-            # Recompute d_fake with graph connected
-            d_fake_g = self.model.discriminator(recon)
-            losses_g = CVAEGANFusion.compute_losses(
-                recon, images, mu, logvar, d_real.detach(), d_fake_g,
-                self.recon_w, self.kl_w, self.adv_w)
+            # Recompute forward with gradients for generator branch.
+            with self.autocast():
+                recon_g, mu_g, logvar_g = self.model(images)
+                d_real_g = self.model.discriminator(images).detach()
+                d_fake_g = self.model.discriminator(recon_g)
+                losses_g = CVAEGANFusion.compute_losses(
+                    recon_g, images, mu_g, logvar_g, d_real_g, d_fake_g,
+                    self.recon_w, self.kl_w, self.adv_w)
 
             self.opt_enc_dec.zero_grad()
-            losses_g["enc_dec_loss"].backward()
-            torch.nn.utils.clip_grad_norm_(
-                list(self.model.encoder.parameters()) + list(self.model.decoder.parameters()),
-                self.config.training.gradient_clip)
-            self.opt_enc_dec.step()
+            self.backward_step(
+                losses_g["enc_dec_loss"],
+                self.opt_enc_dec,
+                clip_params=list(self.model.encoder.parameters()) + list(self.model.decoder.parameters()),
+                clip_value=self.config.training.gradient_clip,
+                scaler_update=True,
+            )
 
             totals["enc_dec"] += losses_g["enc_dec_loss"].item()
             totals["d"] += losses["d_loss"].item()
@@ -106,12 +116,20 @@ class FusionTrainer(BaseTrainer):
         n = 0
         for images, _ in dataloader:
             images = images.to(self.device)
-            recon, mu, logvar = self.model(images)
-            target_01 = (images + 1.0) / 2.0
-            recon_loss = torch.nn.functional.binary_cross_entropy(
-                (recon + 1.0) / 2.0, target_01, reduction="sum") / images.size(0)
-            kl_loss = -0.5 * torch.sum(
-                1 + logvar - mu.pow(2) - logvar.exp()) / images.size(0)
+            with self.autocast(enabled=False):
+                recon, mu, logvar = self.model(images)
+                target_01 = (images + 1.0) / 2.0
+                recon_scaled = (recon.float() + 1.0) / 2.0
+                # Handle NaNs and clamp to [0, 1] to avoid CUDA device-side asserts
+                if not torch.isfinite(recon_scaled).all():
+                    recon_scaled = torch.nan_to_num(recon_scaled, nan=0.0, posinf=1.0, neginf=0.0)
+                recon_scaled = torch.clamp(recon_scaled, 0.0, 1.0)
+                target_01 = torch.clamp(target_01.float(), 0.0, 1.0)
+                
+                recon_loss = torch.nn.functional.binary_cross_entropy(
+                    recon_scaled, target_01, reduction="sum") / images.size(0)
+                kl_loss = -0.5 * torch.sum(
+                    1 + logvar - mu.pow(2) - logvar.exp()) / images.size(0)
             recon_total += recon_loss.item()
             kl_total += kl_loss.item()
             n += 1

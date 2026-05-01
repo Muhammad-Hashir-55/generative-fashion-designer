@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data and large files
+data/
+*.zip
+*.tar.gz
+*.tar
+
+# Training outputs
+outputs/
+*.log
+*.pt
+*.pth
+*.ckpt
+*.h5
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+.ipynb_checkpoints/
+
+# Environments
+venv/
+env/
+.env

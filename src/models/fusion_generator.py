@@ -127,6 +127,8 @@ class CVAEGANFusion(nn.Module):
         init_weights(self, strategy="he")
 
     def reparameterize(self, mu, logvar):
+        # Clamp logvar for numerical stability to prevent NaNs
+        logvar = torch.clamp(logvar, -10.0, 10.0)
         std = torch.exp(0.5 * logvar)
         return mu + std * torch.randn_like(std)
 
@@ -143,9 +145,17 @@ class CVAEGANFusion(nn.Module):
     @staticmethod
     def compute_losses(recon, target, mu, logvar, d_real, d_fake,
                        recon_w=10.0, kl_w=1.0, adv_w=1.0):
+        # Scale to [0,1] and clamp to avoid device-side asserts from BCE
         target_01 = (target + 1.0) / 2.0
-        recon_loss = F.binary_cross_entropy(
-            (recon + 1.0) / 2.0, target_01, reduction="sum") / target.size(0)
+        recon_scaled = (recon.float() + 1.0) / 2.0
+        # Replace NaNs/Infs defensively and clamp to [0,1]
+        if not torch.isfinite(recon_scaled).all():
+            recon_scaled = torch.nan_to_num(recon_scaled, nan=0.0, posinf=1.0, neginf=0.0)
+        recon_scaled = torch.clamp(recon_scaled, 0.0, 1.0)
+        target_01 = torch.clamp(target_01.float(), 0.0, 1.0)
+        with torch.autocast(device_type=target.device.type, enabled=False):
+            recon_loss = F.binary_cross_entropy(
+                recon_scaled, target_01, reduction="sum") / target.size(0)
         kl_loss = -0.5 * torch.sum(
             1 + logvar - mu.pow(2) - logvar.exp()) / target.size(0)
         d_loss = -torch.mean(torch.log(d_real + 1e-8) + torch.log(1 - d_fake + 1e-8))

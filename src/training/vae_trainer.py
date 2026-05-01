@@ -32,6 +32,8 @@ class VAETrainer(BaseTrainer):
             decoder_channels=vae_cfg.decoder_channels,
             image_size=self.config.data.image_size,
             use_residual=getattr(vae_cfg, "use_residual", True),
+            use_pretrained_encoder=getattr(vae_cfg, "use_pretrained_encoder", False),
+            freeze_pretrained_encoder=getattr(vae_cfg, "freeze_pretrained_encoder", True),
         ).to(self.device)
 
         opt_cfg = getattr(self.config.training, "vae_optimizer", self.config.training.optimizer)
@@ -64,14 +66,17 @@ class VAETrainer(BaseTrainer):
 
         for batch_idx, (images, _) in enumerate(tqdm(dataloader, desc="Train", leave=False)):
             images = images.to(self.device)
-            recon, mu, logvar = self.model(images)
-            loss, recon_loss, kl_loss = VAE.loss_function(recon, images, mu, logvar, beta)
+            with self.autocast():
+                recon, mu, logvar = self.model(images)
+                loss, recon_loss, kl_loss = VAE.loss_function(recon, images, mu, logvar, beta)
 
             self.optimizer.zero_grad()
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(),
-                                           self.config.training.gradient_clip)
-            self.optimizer.step()
+            self.backward_step(
+                loss,
+                self.optimizer,
+                clip_params=self.model.parameters(),
+                clip_value=self.config.training.gradient_clip,
+            )
 
             total_loss += loss.item()
             total_recon += recon_loss.item()
@@ -92,8 +97,9 @@ class VAETrainer(BaseTrainer):
         n = 0
         for images, _ in dataloader:
             images = images.to(self.device)
-            recon, mu, logvar = self.model(images)
-            loss, recon_loss, kl_loss = VAE.loss_function(recon, images, mu, logvar, self.beta_target)
+            with self.autocast(enabled=False):
+                recon, mu, logvar = self.model(images)
+                loss, recon_loss, kl_loss = VAE.loss_function(recon, images, mu, logvar, self.beta_target)
             total_loss += loss.item()
             total_recon += recon_loss.item()
             total_kl += kl_loss.item()

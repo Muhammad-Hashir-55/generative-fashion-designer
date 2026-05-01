@@ -9,26 +9,65 @@ project:
 
 # ── Data Pipeline ─────────────────────────────────────────────────────────────
 data:
-  dataset: "FashionMNIST"
+  dataset: "DTD"
   data_dir: "./data"
-  image_size: 32          # upscale from 28 → 32 for GAN architectures
-  channels: 1             # grayscale
-  num_classes: 10
-  batch_size: 128
+  image_size: 64          # upscale to 64x64 for RGB textures
+  channels: 3             # RGB
+  num_classes: 47         # DTD has 47 texture categories
+  batch_size: 64          # reduced from 128 for 64x64 RGB on 6GB VRAM
   val_split: 0.1          # 10% of training set for validation
-  num_workers: 4
+  num_workers: 6
   pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 3
   class_names:
-    - "T-shirt/top"
-    - "Trouser"
-    - "Pullover"
-    - "Dress"
-    - "Coat"
-    - "Sandal"
-    - "Shirt"
-    - "Sneaker"
-    - "Bag"
-    - "Ankle boot"
+    - "banded"
+    - "blotchy"
+    - "braided"
+    - "bubbly"
+    - "bumpy"
+    - "chequered"
+    - "cobwebbed"
+    - "cracked"
+    - "crosshatched"
+    - "crystalline"
+    - "dotted"
+    - "fibrous"
+    - "flecked"
+    - "freckled"
+    - "frilly"
+    - "gauzy"
+    - "grid"
+    - "grooved"
+    - "honeycombed"
+    - "interlaced"
+    - "knitted"
+    - "lacelike"
+    - "lined"
+    - "marbled"
+    - "matted"
+    - "meshed"
+    - "paisley"
+    - "perforated"
+    - "pitted"
+    - "pleated"
+    - "polka-dotted"
+    - "porous"
+    - "potholed"
+    - "scaly"
+    - "smeared"
+    - "spiralled"
+    - "sprinkled"
+    - "stained"
+    - "stratified"
+    - "striped"
+    - "studded"
+    - "swirly"
+    - "veined"
+    - "waffled"
+    - "woven"
+    - "wrinkled"
+    - "zigzagged"
 
 # ── Model Architectures ──────────────────────────────────────────────────────
 models:
@@ -40,6 +79,8 @@ models:
     beta: 1.0                     # β-VAE weight
     beta_anneal_epochs: 10        # KL annealing warmup epochs
     use_residual: true
+    use_pretrained_encoder: true
+    freeze_pretrained_encoder: true
 
   dcgan:
     g_channels: [256, 128, 64, 32]
@@ -105,7 +146,11 @@ training:
     eta_min: 1.0e-6
 
   gradient_clip: 1.0
-  mixed_precision: false           # AMP for CUDA
+  mixed_precision: true            # AMP for CUDA
+  amp_dtype: "float16"            # float16 | bfloat16
+  tf32: true
+  deterministic: false
+  cudnn_benchmark: true
   checkpoint_every: 10             # save checkpoint every N epochs
   sample_every: 5                  # generate samples every N epochs
   log_every: 100                   # log metrics every N batches
@@ -114,6 +159,25 @@ training:
     enabled: true
     patience: 15
     min_delta: 1.0e-4
+
+  lightning:
+    accelerator: "auto"
+    devices: "auto"
+    strategy: "auto"
+    precision: "16-mixed"
+    accumulate_grad_batches: 1
+    gradient_clip_val: 1.0
+    deterministic: false
+    benchmark: true
+    log_every_n_steps: 25
+    enable_checkpointing: true
+    enable_progress_bar: true
+
+  readiness_gate:
+    enabled: true
+    max_val_recon_loss: 0.20
+    max_val_kl_loss: 20.0
+    min_preflight_epochs: 1
 
 # ── Evaluation ────────────────────────────────────────────────────────────────
 evaluation:

@@ -19,6 +19,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision.models import resnet18, ResNet18_Weights
 
 from src.models.components import ResidualBlock, init_weights
 
@@ -138,13 +139,34 @@ class VAE(nn.Module):
         decoder_channels: list[int] | None = None,
         image_size: int = 32,
         use_residual: bool = True,
+        use_pretrained_encoder: bool = False,
+        freeze_pretrained_encoder: bool = True,
     ) -> None:
         super().__init__()
         self.latent_dim = latent_dim
+        self.use_pretrained_encoder = use_pretrained_encoder
 
-        self.encoder = Encoder(
-            in_channels, encoder_channels, latent_dim, image_size, use_residual,
-        )
+        if use_pretrained_encoder:
+            weights = ResNet18_Weights.IMAGENET1K_V1
+            backbone = resnet18(weights=weights)
+            # Keep convolutional trunk only; output is [B, 512, 1, 1] with adaptive pool.
+            self.pretrained_encoder = nn.Sequential(*list(backbone.children())[:-1])
+            if in_channels != 3:
+                raise ValueError("Pretrained ResNet encoder requires 3-channel RGB input")
+            if freeze_pretrained_encoder:
+                for p in self.pretrained_encoder.parameters():
+                    p.requires_grad = False
+            self.fc_mu = nn.Linear(512, latent_dim)
+            self.fc_logvar = nn.Linear(512, latent_dim)
+            self.encoder = None
+        else:
+            self.encoder = Encoder(
+                in_channels, encoder_channels, latent_dim, image_size, use_residual,
+            )
+            self.pretrained_encoder = None
+            self.fc_mu = None
+            self.fc_logvar = None
+
         self.decoder = Decoder(
             in_channels, decoder_channels, latent_dim, image_size,
         )
@@ -155,12 +177,18 @@ class VAE(nn.Module):
         self, mu: torch.Tensor, logvar: torch.Tensor,
     ) -> torch.Tensor:
         """Sample z via the reparameterisation trick: z = μ + σ ⊙ ε."""
+        # Clamp logvar for numerical stability to prevent NaNs
+        logvar = torch.clamp(logvar, -10.0, 10.0)
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
         return mu + std * eps
 
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Encode input to latent distribution parameters."""
+        if self.use_pretrained_encoder:
+            h = self.pretrained_encoder(x)
+            h = h.view(h.size(0), -1)
+            return self.fc_mu(h), self.fc_logvar(h)
         return self.encoder(x)
 
     def decode(self, z: torch.Tensor) -> torch.Tensor:
@@ -209,11 +237,19 @@ class VAE(nn.Module):
         -------
         total_loss, recon_loss, kl_loss
         """
-        # Scale target from [-1,1] to [0,1] for BCE
-        target_01 = (target + 1.0) / 2.0
-        recon_loss = F.binary_cross_entropy(
-            recon, target_01, reduction="sum"
-        ) / target.size(0)
+        # Support two common input normalizations:
+        # - GAN-style: target in [-1, 1] -> scale to [0, 1]
+        # - ImageNet-style: target normalized by (x - mean)/std -> invert
+        if target.min() >= -1.01 and target.max() <= 1.01:
+            target_01 = (target + 1.0) / 2.0
+        else:
+            mean = torch.tensor([0.485, 0.456, 0.406], device=target.device).view(1, 3, 1, 1)
+            std = torch.tensor([0.229, 0.224, 0.225], device=target.device).view(1, 3, 1, 1)
+            target_01 = target * std + mean
+            target_01 = torch.clamp(target_01, 0.0, 1.0)
+
+        # Use MSE for RGB reconstruction stability (works with any scaling)
+        recon_loss = F.mse_loss(recon, target_01, reduction="sum") / target.size(0)
 
         # KL divergence: -0.5 * Σ(1 + log σ² - μ² - σ²)
         kl_loss = -0.5 * torch.sum(

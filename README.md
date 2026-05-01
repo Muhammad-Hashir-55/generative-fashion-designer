@@ -93,6 +93,12 @@ python scripts/visualize_data.py
 # Train VAE (50 epochs)
 python scripts/train.py --model vae --epochs 50
 
+# Fast multi-GPU VAE training with preflight readiness gate
+python scripts/train_lightning.py --epochs 50 --devices auto --precision 16-mixed
+
+# Preflight only (validates model/data and aborts if readiness gate fails)
+python scripts/train_lightning.py --preflight-only
+
 # Train DCGAN (80 epochs)
 python scripts/train.py --model dcgan --epochs 80
 

@@ -1,129 +1,143 @@
 """
-Fashion Designer Dataset
-=========================
-Custom wrapper around ``torchvision.datasets.FashionMNIST`` with
-stratified train/val splitting, rich metadata, and label utilities.
+Dataset Module
+===============
+Provides access to the Describable Textures Dataset (DTD) which
+serves as our proxy for high-frequency textile and fabric patterns.
 """
 
 from __future__ import annotations
 
-from typing import Any
-
 import torch
-from torch.utils.data import Dataset, Subset
-import torchvision.datasets as tv_datasets
-import numpy as np
+from torch.utils.data import Dataset
+from torchvision.datasets import DTD
 
 
-# ─── Class Metadata ──────────────────────────────────────────────────────────
-FASHION_CLASSES: list[str] = [
-    "T-shirt/top",
-    "Trouser",
-    "Pullover",
-    "Dress",
-    "Coat",
-    "Sandal",
-    "Shirt",
-    "Sneaker",
-    "Bag",
-    "Ankle boot",
+# Canonical DTD class order (47 categories). Kept as a constant so that
+# inference utilities can map names -> labels without requiring dataset
+# download/availability.
+DTD_CLASSES: list[str] = [
+    "banded",
+    "blotchy",
+    "braided",
+    "bubbly",
+    "bumpy",
+    "chequered",
+    "cobwebbed",
+    "cracked",
+    "crosshatched",
+    "crystalline",
+    "dotted",
+    "fibrous",
+    "flecked",
+    "freckled",
+    "frilly",
+    "gauzy",
+    "grid",
+    "grooved",
+    "honeycombed",
+    "interlaced",
+    "knitted",
+    "lacelike",
+    "lined",
+    "marbled",
+    "matted",
+    "meshed",
+    "paisley",
+    "perforated",
+    "pitted",
+    "pleated",
+    "polka-dotted",
+    "porous",
+    "potholed",
+    "scaly",
+    "smeared",
+    "spiralled",
+    "sprinkled",
+    "stained",
+    "stratified",
+    "striped",
+    "studded",
+    "swirly",
+    "veined",
+    "waffled",
+    "woven",
+    "wrinkled",
+    "zigzagged",
 ]
 
-NUM_CLASSES: int = len(FASHION_CLASSES)
-
-
-def label_to_name(label: int) -> str:
-    """Convert integer label to human-readable class name."""
-    return FASHION_CLASSES[label]
-
-
-def name_to_label(name: str) -> int:
-    """Convert class name to integer label (case-insensitive)."""
-    lower_map = {c.lower(): i for i, c in enumerate(FASHION_CLASSES)}
-    key = name.strip().lower()
-    if key not in lower_map:
-        raise ValueError(
-            f"Unknown class '{name}'. Valid: {FASHION_CLASSES}"
-        )
-    return lower_map[key]
+# Backwards-compatible alias used by inference code.
+FASHION_CLASSES = DTD_CLASSES
 
 
 class FashionDesignerDataset(Dataset):
-    """Fashion-MNIST wrapper with stratified split support.
-
-    Parameters
-    ----------
-    root : str
-        Download / cache directory.
-    train : bool
-        If True, load the 60 000-image training split.
-    transform : callable, optional
-        Torchvision-style transform applied to each PIL image.
-    download : bool
-        Download if not already cached.
-    """
+    """Wrapper for the DTD dataset with split support."""
 
     def __init__(
         self,
-        root: str = "./data",
-        train: bool = True,
-        transform: Any = None,
-        download: bool = True,
+        root: str,
+        split: str = "train",
+        transform=None,
+        download: bool = False,
     ) -> None:
-        self.inner = tv_datasets.FashionMNIST(
+        """
+        Parameters
+        ----------
+        root : str
+            Data directory.
+        split : str
+            One of 'train', 'val', 'test'.
+        transform : callable, optional
+            A function/transform to apply to the images.
+        download : bool
+            If true, downloads the dataset from the internet.
+        """
+        super().__init__()
+        self.dataset = DTD(
             root=root,
-            train=train,
+            split=split,
             transform=transform,
             download=download,
         )
-        self.classes = FASHION_CLASSES
-        self.num_classes = NUM_CLASSES
+        self.classes = self.dataset.classes
+
+        # Extract targets (labels) without iterating the dataset (which would
+        # load/transform every image and is very slow).
+        labels = None
+        for attr in ("_labels", "labels", "targets"):
+            if hasattr(self.dataset, attr):
+                labels = getattr(self.dataset, attr)
+                break
+        self.targets = list(labels) if labels is not None else []
 
     def __len__(self) -> int:
-        return len(self.inner)
+        return len(self.dataset)
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, int]:
-        return self.inner[idx]
-
-    @property
-    def targets(self) -> list[int]:
-        """Access all labels for stratification purposes."""
-        return self.inner.targets.tolist() if isinstance(
-            self.inner.targets, torch.Tensor
-        ) else list(self.inner.targets)
+        image, label = self.dataset[idx]
+        return image, label
 
 
-def stratified_split(
-    dataset: FashionDesignerDataset,
-    val_fraction: float = 0.1,
-    seed: int = 42,
-) -> tuple[Subset, Subset]:
-    """Split a dataset into train and validation subsets preserving
-    the class distribution (stratified split).
+def get_class_names(root: str = "./data", prefer_dataset: bool = False) -> list[str]:
+    """Return the list of 47 texture classes in DTD.
 
-    Parameters
-    ----------
-    dataset : FashionDesignerDataset
-        The full training dataset.
-    val_fraction : float
-        Fraction of data to use for validation.
-    seed : int
-        Random seed for reproducibility.
-
-    Returns
-    -------
-    train_subset, val_subset : (Subset, Subset)
+    By default this is offline-safe and returns the canonical constant list.
+    Set ``prefer_dataset=True`` to query torchvision's DTD metadata if the
+    dataset is already present locally.
     """
-    rng = np.random.RandomState(seed)
-    targets = np.array(dataset.targets)
-    train_indices: list[int] = []
-    val_indices: list[int] = []
+    if prefer_dataset:
+        try:
+            ds = DTD(root=root, split="train", download=False)
+            return list(ds.classes)
+        except Exception:
+            pass
+    return list(DTD_CLASSES)
 
-    for class_id in range(dataset.num_classes):
-        class_mask = np.where(targets == class_id)[0]
-        rng.shuffle(class_mask)
-        n_val = max(1, int(len(class_mask) * val_fraction))
-        val_indices.extend(class_mask[:n_val].tolist())
-        train_indices.extend(class_mask[n_val:].tolist())
 
-    return Subset(dataset, train_indices), Subset(dataset, val_indices)
+def name_to_label(name: str, root: str = "./data") -> int:
+    """Convert class name to integer label."""
+    classes = get_class_names(root)
+    name = name.lower()
+    for i, c in enumerate(classes):
+        if c.lower() == name:
+            return i
+    raise ValueError(f"Class '{name}' not found. Available: {classes}")
