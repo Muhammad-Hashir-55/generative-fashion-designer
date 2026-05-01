@@ -57,7 +57,11 @@ class FashionGenerator:
                 in_channels=cfg.data.channels, latent_dim=cfg.models.latent_dim,
                 encoder_channels=cfg.models.vae.encoder_channels,
                 decoder_channels=cfg.models.vae.decoder_channels,
-                image_size=cfg.data.image_size)
+                image_size=cfg.data.image_size,
+                use_residual=getattr(cfg.models.vae, "use_residual", True),
+                use_pretrained_encoder=getattr(cfg.models.vae, "use_pretrained_encoder", False),
+                freeze_pretrained_encoder=getattr(cfg.models.vae, "freeze_pretrained_encoder", True),
+            )
         elif self.model_type == "dcgan":
             return DCGenerator(
                 latent_dim=cfg.models.latent_dim,
