@@ -1,0 +1,51 @@
+# Migration to Textile-Compatible Dataset (DTD)
+
+The original project proposal for the "Generative Fashion Designer" focuses on creating traditional Pakistani textile patterns (e.g., Ajrak, Khaddar, Phulkari). Since a public, pre-curated dataset of these specific textiles does not exist (the proposal notes it must be collected manually), we need a compatible stand-in that models high-frequency patterns, textures, and fabrics in RGB color.
+
+This plan outlines the migration from the grayscale `Fashion-MNIST` (images of shirts/shoes) to the **Describable Textures Dataset (DTD)**, which contains 5,640 images across 47 texture categories (including `paisley`, `woven`, `interlaced`, `knitted`, `zigzag`). This represents a massive leap in complexity and visual fidelity, aligning much closer with the proposal's goals.
+
+## User Review Required
+
+> [!IMPORTANT]
+> Because DTD images are full-color textures rather than simple 28x28 grayscale icons, this upgrade significantly increases the computational requirements:
+> 1. **RGB Color**: Models will generate 3-channel RGB images instead of 1-channel grayscale.
+> 2. **Resolution**: We will increase the generation resolution from 32x32 to **64x64** (or 128x128 if your RTX 4050 6GB VRAM permits). 
+> 3. **Classes**: Conditional models will train on 47 distinct texture classes instead of 10 clothing categories.
+>
+> Please confirm if you approve using DTD as the dataset, and if you are comfortable targeting 64x64 resolution for training on your RTX 4050.
+
+## Open Questions
+
+> [!WARNING]
+> Since we are shifting to a heavier RGB dataset, should I set the base resolution to **64x64** to ensure all 6 models can train quickly and safely on your 6GB VRAM, or would you like me to push it to **128x128** (which might require smaller batch sizes and longer training times)?
+
+---
+
+## Proposed Changes
+
+### Configuration
+#### [MODIFY] config/default.yaml
+- Update data parameters: `dataset: "dtd"`, `channels: 3`, `num_classes: 47`.
+- Adjust `image_size` to `64` (or `128`).
+- Adjust batch sizes to accommodate the larger RGB tensors on a 6GB VRAM constraint.
+
+### Data Pipeline
+#### [MODIFY] src/data/dataset.py
+- Remove `FashionMNIST` dependencies.
+- Integrate `torchvision.datasets.DTD`.
+- Implement proper train/val/test splits since DTD comes with predefined split folds.
+- Update class label mappings and metadata extraction.
+
+#### [MODIFY] src/data/augmentation.py
+- Update augmentation pipelines to handle 3-channel RGB tensors (e.g., adjusting normalization means/stds to standard ImageNet values `[0.485, 0.456, 0.406]`).
+
+### CLI Scripts
+#### [MODIFY] scripts/visualize_data.py
+- Update the visualization script to correctly denormalize and plot RGB texture images instead of grayscale matrices.
+
+## Verification Plan
+
+### Automated Tests
+1. Execute `python scripts/visualize_data.py` to ensure DTD downloads correctly and the RGB augmentation pipeline applies without errors.
+2. Execute a 1-epoch dry run using `python scripts/train.py --model vae --epochs 1` to verify the 3-channel configuration propagates through the model architectures without tensor shape mismatches.
+3. Verify memory usage remains well within the 6GB RTX 4050 limit.
