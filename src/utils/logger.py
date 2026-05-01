@@ -54,7 +54,7 @@ class TrainingLogger:
         self.logger.handlers.clear()
 
         formatter = logging.Formatter(
-            fmt="│ %(asctime)s │ %(levelname)-8s │ %(message)s",
+            fmt="| %(asctime)s | %(levelname)-8s | %(message)s",
             datefmt="%H:%M:%S",
         )
 
@@ -126,15 +126,15 @@ class TrainingLogger:
         metrics: dict[str, float],
     ) -> None:
         """Pretty-print epoch summary with metrics."""
-        metrics_str = " │ ".join(f"{k}: {v:.6f}" for k, v in metrics.items())
-        self.info(f"Epoch [{epoch:>4d}/{total_epochs}] │ {metrics_str}")
+        metrics_str = " | ".join(f"{k}: {v:.6f}" for k, v in metrics.items())
+        self.info(f"Epoch [{epoch:>4d}/{total_epochs}] | {metrics_str}")
 
     def log_training_start(self, model_name: str, config: Any = None) -> None:
         """Print a styled training header."""
-        border = "═" * 70
-        self.info(f"╔{border}╗")
-        self.info(f"║  Training: {model_name:<57s} ║")
-        self.info(f"╚{border}╝")
+        border = "=" * 70
+        self.info(f"+{border}+")
+        self.info(f"|  Training: {model_name:<57s} |")
+        self.info(f"+{border}+")
         if config:
             self.info(f"  Config: {config}")
 

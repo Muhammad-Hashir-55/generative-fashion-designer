@@ -52,9 +52,9 @@ class ModelEvaluator:
 
         Returns dict of metric values.
         """
-        print(f"\n{'═' * 60}")
+        print(f"\n{'=' * 60}")
         print(f"  Evaluating: {model_name}")
-        print(f"{'═' * 60}")
+        print(f"{'=' * 60}")
 
         t0 = time.time()
 

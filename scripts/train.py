@@ -62,11 +62,11 @@ def main():
     device = torch.device(args.device) if args.device else torch.device(
         "cuda" if torch.cuda.is_available() else "cpu")
 
-    print(f"\n{'═' * 60}")
-    print(f"  Generative Fashion Designer — Training Pipeline")
+    print(f"\n{'=' * 60}")
+    print(f"  Generative Fashion Designer - Training Pipeline")
     print(f"  Model: {args.model.upper()}")
     print(f"  Device: {device}")
-    print(f"{'═' * 60}\n")
+    print(f"{'=' * 60}\n")
 
     # Seed
     seed = getattr(config.project, "seed", 42)
@@ -129,9 +129,9 @@ def main():
             viz.plot_gan_loss_comparison(
                 history[g_key], history[d_key], model_name=args.model)
 
-    print(f"\n{'═' * 60}")
+    print(f"\n{'=' * 60}")
     print(f"  Training complete! Check outputs/ for results.")
-    print(f"{'═' * 60}\n")
+    print(f"{'=' * 60}\n")
 
 
 if __name__ == "__main__":
