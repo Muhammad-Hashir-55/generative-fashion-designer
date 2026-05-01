@@ -1,0 +1,145 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Generative Fashion Designer — Master Configuration
+# ═══════════════════════════════════════════════════════════════════════════════
+
+project:
+  name: "Generative Fashion Designer"
+  version: "1.0.0"
+  seed: 42
+
+# ── Data Pipeline ─────────────────────────────────────────────────────────────
+data:
+  dataset: "FashionMNIST"
+  data_dir: "./data"
+  image_size: 32          # upscale from 28 → 32 for GAN architectures
+  channels: 1             # grayscale
+  num_classes: 10
+  batch_size: 128
+  val_split: 0.1          # 10% of training set for validation
+  num_workers: 4
+  pin_memory: true
+  class_names:
+    - "T-shirt/top"
+    - "Trouser"
+    - "Pullover"
+    - "Dress"
+    - "Coat"
+    - "Sandal"
+    - "Shirt"
+    - "Sneaker"
+    - "Bag"
+    - "Ankle boot"
+
+# ── Model Architectures ──────────────────────────────────────────────────────
+models:
+  latent_dim: 128
+  
+  vae:
+    encoder_channels: [32, 64, 128, 256]
+    decoder_channels: [256, 128, 64, 32]
+    beta: 1.0                     # β-VAE weight
+    beta_anneal_epochs: 10        # KL annealing warmup epochs
+    use_residual: true
+
+  dcgan:
+    g_channels: [256, 128, 64, 32]
+    d_channels: [32, 64, 128, 256]
+    g_features: 256
+    d_features: 256
+    label_smoothing: 0.1
+    noise_injection: 0.05
+
+  wgan_gp:
+    g_channels: [256, 128, 64, 32]
+    critic_channels: [32, 64, 128, 256]
+    lambda_gp: 10.0               # gradient penalty coefficient
+    n_critic: 5                    # critic steps per generator step
+
+  cgan:
+    g_channels: [256, 128, 64, 32]
+    d_channels: [32, 64, 128, 256]
+    embed_dim: 64                  # class embedding dimension
+    projection: true               # use projection discriminator
+
+  style_transfer:
+    content_layers: ["21"]         # conv4_2
+    style_layers: ["0", "5", "10", "19", "28"]   # conv1_1 → conv5_1
+    content_weight: 1.0
+    style_weight: 1.0e+5
+    tv_weight: 1.0e-6              # total variation regularization
+    num_steps: 300
+    optimizer: "lbfgs"
+
+  fusion:
+    encoder_channels: [32, 64, 128, 256]
+    decoder_channels: [256, 128, 64, 32]
+    d_channels: [32, 64, 128, 256]
+    recon_weight: 10.0
+    kl_weight: 1.0
+    adv_weight: 1.0
+
+# ── Training ──────────────────────────────────────────────────────────────────
+training:
+  default_epochs: 50
+  epochs:
+    vae: 50
+    dcgan: 80
+    wgan_gp: 80
+    cgan: 80
+    fusion: 60
+
+  optimizer:
+    type: "adam"
+    lr: 2.0e-4
+    betas: [0.5, 0.999]
+    weight_decay: 0.0
+
+  vae_optimizer:
+    lr: 1.0e-3
+    betas: [0.9, 0.999]
+
+  scheduler:
+    type: "cosine_warm_restarts"   # cosine_warm_restarts | step | exponential
+    T_0: 10
+    T_mult: 2
+    eta_min: 1.0e-6
+
+  gradient_clip: 1.0
+  mixed_precision: false           # AMP for CUDA
+  checkpoint_every: 10             # save checkpoint every N epochs
+  sample_every: 5                  # generate samples every N epochs
+  log_every: 100                   # log metrics every N batches
+
+  early_stopping:
+    enabled: true
+    patience: 15
+    min_delta: 1.0e-4
+
+# ── Evaluation ────────────────────────────────────────────────────────────────
+evaluation:
+  num_samples: 1000                # samples for FID/IS computation
+  fid:
+    enabled: true
+    feature_dim: 2048
+  inception_score:
+    enabled: true
+    splits: 10
+  ssim:
+    enabled: true
+  reconstruction_metrics: true     # MSE, MAE for VAE
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+paths:
+  data_dir: "./data"
+  checkpoint_dir: "./outputs/checkpoints"
+  log_dir: "./outputs/logs"
+  generated_dir: "./outputs/generated"
+  evaluation_dir: "./outputs/evaluation"
+
+# ── Visualization ─────────────────────────────────────────────────────────────
+visualization:
+  grid_size: 8                     # NxN sample grid
+  interpolation_steps: 10
+  tsne_samples: 2000
+  dpi: 150
+  figsize: [12, 12]
