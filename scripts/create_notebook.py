@@ -59,7 +59,7 @@ notebook = {
     "\n",
     "print(\"Downloading/Loading DTD Dataset...\")\n",
     "dataset = torchvision.datasets.DTD(root=DATA_DIR, split='train', download=True, transform=transform)\n",
-    "dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True, drop_last=True)\n",
+    "dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0, pin_memory=False, drop_last=True)\n",
     "print(f\"Dataset loaded: {len(dataset)} images.\")\n"
    ]
   },
