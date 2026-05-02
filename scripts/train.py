@@ -42,7 +42,7 @@ def parse_args():
     )
     parser.add_argument(
         "--model", type=str, required=True,
-        choices=["vae", "dcgan", "wgan_gp", "cgan", "fusion"],
+        choices=["vae", "dcgan", "wgan_gp", "cgan", "fusion", "ddpm"],
         help="Model architecture to train",
     )
     parser.add_argument("--epochs", type=int, default=None,
@@ -110,6 +110,13 @@ def _resume_trainer_state(trainer, ckpt_path: Path, model_name: str) -> int:
             {"encoder": trainer.model.encoder, "decoder": trainer.model.decoder,
              "discriminator": trainer.model.discriminator},
             {"opt_enc_dec": trainer.opt_enc_dec, "opt_d": trainer.opt_d},
+            device=trainer.device,
+        )
+    elif model_name == "ddpm":
+        state = CheckpointManager.load(
+            ckpt_path,
+            {"model": trainer.model},
+            {"optimizer": trainer.optimizer},
             device=trainer.device,
         )
     else:
@@ -190,6 +197,9 @@ def run_training(args):
     elif args.model == "fusion":
         from src.training.fusion_trainer import FusionTrainer
         trainer = FusionTrainer(config, device)
+    elif args.model == "ddpm":
+        from src.training.ddpm_trainer import DDPMTrainer
+        trainer = DDPMTrainer(config, device)
     else:
         raise ValueError(f"Unknown model: {args.model}")
 
