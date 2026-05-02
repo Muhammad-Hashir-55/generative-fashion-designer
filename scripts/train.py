@@ -114,10 +114,7 @@ def _resume_trainer_state(trainer, ckpt_path: Path, model_name: str) -> int:
         )
     elif model_name == "ddpm":
         state = CheckpointManager.load(
-            ckpt_path,
-            {"model": trainer.model},
-            {"optimizer": trainer.optimizer},
-            device=trainer.device,
+            ckpt_path, trainer.model, trainer.optimizer, device=trainer.device
         )
     else:
         raise ValueError(f"Unknown model: {model_name}")

@@ -90,8 +90,7 @@ class DDPMTrainer(BaseTrainer):
             )
 
     def _save_checkpoint(self, epoch: int, metrics: dict[str, float]) -> None:
-        state = {
-            "model": self.model.state_dict(),
-            "optimizer": self.optimizer.state_dict()
-        }
-        self.ckpt_mgr.save(state, metrics["loss"], epoch, metric_mode="min")
+        self.ckpt_mgr.save(self.model, self.optimizer, epoch, metrics)
+        self.ckpt_mgr.save_best(
+            self.model, self.optimizer, epoch, metric_value=metrics["loss"], metrics=metrics, lower_is_better=True
+        )
