@@ -148,7 +148,7 @@ class DCDiscriminator(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
             nn.Dropout(0.3),
             maybe_sn(nn.Linear(256, 1)),
-            nn.Sigmoid(),
+            # NOTE: No Sigmoid — outputs raw logits for BCEWithLogitsLoss (AMP-safe)
         )
         init_weights(self, strategy="he")
 

@@ -49,7 +49,7 @@ class GANTrainer(BaseTrainer):
         self.opt_g = torch.optim.Adam(self.generator.parameters(), lr=lr, betas=betas)
         self.opt_d = torch.optim.Adam(self.discriminator.parameters(), lr=lr, betas=betas)
 
-        self.criterion = nn.BCELoss()
+        self.criterion = nn.BCEWithLogitsLoss()  # AMP-safe; no need for autocast(enabled=False)
         self.label_smoothing = getattr(dcfg, "label_smoothing", 0.1)
         self.noise_injection = getattr(dcfg, "noise_injection", 0.05)
         self.latent_dim = latent_dim
@@ -81,8 +81,7 @@ class GANTrainer(BaseTrainer):
             self.opt_d.zero_grad()
             with self.autocast():
                 d_real = self.discriminator(images)
-            with self.autocast(enabled=False):
-                loss_d_real = self.criterion(d_real.float(), real_label.float())
+                loss_d_real = self.criterion(d_real, real_label)
 
             z = torch.randn(batch_size, self.latent_dim, device=self.device)
             with self.autocast():
@@ -91,8 +90,7 @@ class GANTrainer(BaseTrainer):
                 fake = fake + self.noise_injection * torch.randn_like(fake)
             with self.autocast():
                 d_fake = self.discriminator(fake)
-            with self.autocast(enabled=False):
-                loss_d_fake = self.criterion(d_fake.float(), fake_label.float())
+                loss_d_fake = self.criterion(d_fake, fake_label)
 
             loss_d = (loss_d_real + loss_d_fake) / 2
             self.backward_step(
@@ -103,7 +101,8 @@ class GANTrainer(BaseTrainer):
                 scaler_update=False,
             )
 
-            d_acc = ((d_real > 0.5).float().mean() + (d_fake < 0.5).float().mean()) / 2
+            # logits > 0 ↔ discriminator predicts 'real'
+            d_acc = ((d_real > 0.0).float().mean() + (d_fake <= 0.0).float().mean()) / 2
 
             # ── Train Generator ───────────────────────────────────────
             self.opt_g.zero_grad()
@@ -111,9 +110,8 @@ class GANTrainer(BaseTrainer):
             with self.autocast():
                 fake = self.generator(z)
                 d_fake_for_g = self.discriminator(fake)
-            with self.autocast(enabled=False):
                 loss_g = self.criterion(
-                    d_fake_for_g.float(), torch.ones(batch_size, 1, device=self.device).float()
+                    d_fake_for_g, torch.ones(batch_size, 1, device=self.device)
                 )
             self.backward_step(
                 loss_g,
@@ -139,14 +137,14 @@ class GANTrainer(BaseTrainer):
         n = 0
         for images, _ in dataloader:
             images = images.to(self.device)
-            with self.autocast(enabled=False):
+            with self.autocast():
                 d_real = self.discriminator(images)
                 z = torch.randn(images.size(0), self.latent_dim, device=self.device)
                 fake = self.generator(z)
                 d_fake = self.discriminator(fake)
                 d_loss = (
-                    self.criterion(d_real.float(), torch.ones_like(d_real).float()) +
-                    self.criterion(d_fake.float(), torch.zeros_like(d_fake).float())
+                    self.criterion(d_real, torch.ones_like(d_real)) +
+                    self.criterion(d_fake, torch.zeros_like(d_fake))
                 ) / 2
             d_total += d_loss.item()
             n += 1

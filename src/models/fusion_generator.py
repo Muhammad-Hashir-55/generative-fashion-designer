@@ -100,7 +100,8 @@ class FusionDiscriminator(nn.Module):
         self.out = nn.Sequential(
             nn.utils.spectral_norm(nn.Linear(self._flat, 256)),
             nn.LeakyReLU(0.2, True),
-            nn.utils.spectral_norm(nn.Linear(256, 1)), nn.Sigmoid(),
+            nn.utils.spectral_norm(nn.Linear(256, 1)),
+            # No Sigmoid — raw logits for BCEWithLogitsLoss (AMP-safe)
         )
 
     def forward(self, x: torch.Tensor):
@@ -154,12 +155,15 @@ class CVAEGANFusion(nn.Module):
         recon_scaled = torch.clamp(recon_scaled, 0.0, 1.0)
         target_01 = torch.clamp(target_01.float(), 0.0, 1.0)
         with torch.autocast(device_type=target.device.type, enabled=False):
-            recon_loss = F.binary_cross_entropy(
+            recon_loss = F.mse_loss(
                 recon_scaled, target_01, reduction="sum") / target.size(0)
         kl_loss = -0.5 * torch.sum(
             1 + logvar - mu.pow(2) - logvar.exp()) / target.size(0)
-        d_loss = -torch.mean(torch.log(d_real + 1e-8) + torch.log(1 - d_fake + 1e-8))
-        g_loss = -torch.mean(torch.log(d_fake + 1e-8))
+        # d_real / d_fake are now raw logits — use BCEWithLogitsLoss
+        bce = F.binary_cross_entropy_with_logits
+        d_loss = (bce(d_real, torch.ones_like(d_real)) +
+                  bce(d_fake, torch.zeros_like(d_fake))) / 2
+        g_loss = bce(d_fake, torch.ones_like(d_fake))
         enc_dec_loss = recon_w * recon_loss + kl_w * kl_loss + adv_w * g_loss
         return {"enc_dec_loss": enc_dec_loss, "d_loss": d_loss,
                 "recon_loss": recon_loss, "kl_loss": kl_loss,

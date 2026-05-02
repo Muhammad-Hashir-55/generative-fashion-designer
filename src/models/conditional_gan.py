@@ -177,4 +177,4 @@ class ProjectionDiscriminator(nn.Module):
 
         unconditional = self.output_fc(features)         # [B, 1]
 
-        return torch.sigmoid(projection + unconditional)
+        return projection + unconditional  # raw logits, no sigmoid (AMP-safe)
