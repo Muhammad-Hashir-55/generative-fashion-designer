@@ -12,7 +12,6 @@ __pycache__/
 # Training outputs
 outputs/
 *.log
-*.pt
 *.pth
 *.ckpt
 *.h5
