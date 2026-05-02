@@ -59,7 +59,7 @@ GENERATED_DIR = PROJECT_ROOT / "outputs" / "generated"
 GALLERY_DIR = PROJECT_ROOT / "outputs" / "gallery"
 GALLERY_DIR.mkdir(parents=True, exist_ok=True)
 
-AVAILABLE_MODELS = ["vae", "dcgan", "wgan_gp", "cgan"]  # fusion excluded (unstable)
+AVAILABLE_MODELS = ["vae", "dcgan", "wgan_gp", "cgan", "latent_dit"]  # fusion excluded (unstable)
 _generators: dict[str, FashionGenerator] = {}
 
 
@@ -279,6 +279,7 @@ def _model_display_name(m: str) -> str:
         "dcgan": "Deep Convolutional GAN (DCGAN)",
         "wgan_gp": "Wasserstein GAN + GP (WGAN-GP)",
         "cgan": "Conditional GAN (cGAN)",
+        "latent_dit": "Latent Diffusion Transformer (DiT)",
         "fusion": "CVAE-GAN Fusion",
     }.get(m, m.upper())
 
@@ -289,6 +290,7 @@ def _model_description(m: str) -> str:
         "dcgan": "Classic GAN with transposed convolutions and spectral normalization.",
         "wgan_gp": "Wasserstein distance training with gradient penalty for stable convergence.",
         "cgan": "Class-conditional generation targeting specific texture categories.",
+        "latent_dit": "State-of-the-art Latent Diffusion model using a Transformer backbone (DiT).",
         "fusion": "Hybrid CVAE+GAN combining reconstruction quality with adversarial sharpness.",
     }.get(m, "Generative model for texture synthesis.")
 
@@ -300,6 +302,7 @@ def _mock_metrics() -> dict:
         "dcgan": {"fid": 178.6, "is_mean": 1.9, "is_std": 0.4},
         "wgan_gp": {"fid": 165.2, "is_mean": 2.0, "is_std": 0.35, "w_dist": -12.4},
         "cgan": {"fid": 155.4, "is_mean": 2.2, "is_std": 0.28},
+        "latent_dit": {"fid": 84.2, "is_mean": 3.1, "is_std": 0.42},
     }
 
 

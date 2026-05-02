@@ -111,28 +111,39 @@ def generate_gemini_reference(
 
 
 def _call_gemini_api(class_name: str, image_size: int, api_key: str, cache_key_str: str) -> dict:
-    """Call Gemini API to get a texture reference image."""
-    import google.generativeai as genai
+    """Call Gemini API using the new google-genai SDK."""
+    from google import genai
+    from google.genai import types
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.0-flash-exp")
+    client = genai.Client(api_key=api_key)
+    
+    # Using gemini-2.0-flash for better availability
+    model_id = "gemini-2.0-flash"
 
     prompt = (
-        f"Generate a high-quality, close-up photograph of a '{class_name}' texture/fabric pattern. "
+        f"Generate a high-quality, close-up photograph of a '{class_name}' texture or fabric pattern. "
         f"The image should clearly show the characteristic features of {class_name} textile texture. "
-        f"Photorealistic, well-lit, centered composition, no text or watermarks."
+        f"Output should be a pure image file. Photorealistic, centered composition."
     )
 
-    response = model.generate_content(
-        prompt,
-        generation_config={"response_mime_type": "image/png"}
-    )
-
-    if response.candidates and response.candidates[0].content.parts:
+    # Note: As of latest SDK, image generation is handled via specific models or parameters.
+    # If the model doesn't support direct image generation in this way, 
+    # we might need to use the older SDK or a different approach.
+    # However, for 'Vision' tasks, Gemini 2.0 Flash is the target.
+    
+    try:
+        response = client.models.generate_content(
+            model=model_id,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="image/png"
+            )
+        )
+        
+        # Extract image from response parts
         for part in response.candidates[0].content.parts:
-            if hasattr(part, 'inline_data') and part.inline_data:
+            if part.inline_data:
                 b64 = base64.b64encode(part.inline_data.data).decode()
-                # Resize to target size
                 img = _b64_to_pil(b64).resize((image_size, image_size), Image.LANCZOS)
                 b64_resized = _pil_to_b64(img)
                 _save_cached(cache_key_str, b64_resized)
@@ -141,6 +152,10 @@ def _call_gemini_api(class_name: str, image_size: int, api_key: str, cache_key_s
                     "source": "gemini",
                     "description": f"Gemini Vision reference for '{class_name}' texture"
                 }
+    except Exception as e:
+        # If the new SDK fails or doesn't support this specific prompt type yet,
+        # we log it and it will fall back to synthetic.
+        raise e
 
     raise ValueError("No image in Gemini response")
 

@@ -16,6 +16,8 @@ from src.models.dcgan import DCGenerator
 from src.models.wgan_gp import WGANGenerator
 from src.models.conditional_gan import ConditionalGenerator
 from src.models.fusion_generator import CVAEGANFusion
+from src.models.latent_dit import LatentDiT, StableDDPM
+from diffusers import AutoencoderKL
 from src.utils.config import Config
 from src.utils.checkpoint import CheckpointManager
 from src.data.dataset import FASHION_CLASSES, name_to_label
@@ -37,6 +39,7 @@ class FashionGenerator:
         "wgan_gp": "generator",
         "cgan": "generator",
         "fusion": "decoder",
+        "latent_dit": "model",
     }
 
     def __init__(self, config: Config, model_type: str = "vae",
@@ -46,6 +49,14 @@ class FashionGenerator:
         self.device = device or torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
         self.latent_dim = config.models.latent_dim
+        
+        # For Latent DiT, we also need a VAE
+        self.vae = None
+        if self.model_type == "latent_dit":
+            print("Loading pre-trained VAE for Latent DiT...")
+            self.vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse").to(self.device)
+            self.vae.eval()
+            
         self.model = self._build_model()
         self.model.to(self.device)
         self.model.eval()
@@ -86,6 +97,9 @@ class FashionGenerator:
             return CVAEGANFusion(
                 in_channels=cfg.data.channels, latent_dim=cfg.models.latent_dim,
                 image_size=cfg.data.image_size)
+        elif self.model_type == "latent_dit":
+            dit = LatentDiT(in_channels=4, embed_dim=256, depth=6, n_heads=8, latent_size=8)
+            return StableDDPM(dit, timesteps=1000)
         raise ValueError(f"Unknown model type: {self.model_type}")
 
     def load_checkpoint(self, path: str | Path) -> None:
@@ -97,6 +111,8 @@ class FashionGenerator:
             key = self.MODEL_REGISTRY.get(self.model_type, "generator")
             if key in state["model_states"]:
                 self.model.load_state_dict(state["model_states"][key])
+        elif "model_state_dict" in state:
+            self.model.load_state_dict(state["model_state_dict"])
         print(f"Loaded checkpoint from {path}")
 
     @torch.no_grad()
@@ -127,6 +143,8 @@ class FashionGenerator:
             return self.model(z, labels)
         elif self.model_type == "fusion":
             return self.model.generate(num_samples, self.device)
+        elif self.model_type == "latent_dit":
+            return self.model.sample(num_samples, self.vae, device=self.device)
         else:
             return self.model(z)
 
