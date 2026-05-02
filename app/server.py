@@ -12,14 +12,20 @@ Then open http://localhost:5000 in your browser.
 
 from __future__ import annotations
 
+import io
 import os
+import sys
+
 # Must be set before any protobuf-dependent package is imported
 os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 
+# Fix Windows console encoding so Unicode symbols print correctly
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+
 import base64
-import io
 import json
-import sys
 import time
 from pathlib import Path
 
@@ -312,7 +318,7 @@ if __name__ == "__main__":
     # Pre-warm VAE model
     try:
         _ = _get_generator("vae")
-        print("  [✓] VAE model loaded")
+        print("  [OK] VAE model loaded")
     except Exception as e:
         print(f"  [!] VAE load failed: {e}")
 
