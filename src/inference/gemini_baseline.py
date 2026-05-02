@@ -19,6 +19,9 @@ import hashlib
 from pathlib import Path
 from typing import Optional
 
+# Suppress protobuf version conflicts from TF/google-generativeai coexistence
+os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
+
 from PIL import Image
 
 

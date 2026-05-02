@@ -12,10 +12,13 @@ Then open http://localhost:5000 in your browser.
 
 from __future__ import annotations
 
+import os
+# Must be set before any protobuf-dependent package is imported
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
+
 import base64
 import io
 import json
-import os
 import sys
 import time
 from pathlib import Path
@@ -31,6 +34,7 @@ import torch
 import torchvision.utils as vutils
 from PIL import Image
 
+# Import only what we need — bypass src/__init__ to avoid tensorboard/TF protobuf conflict
 from src.utils.config import load_config
 from src.inference.generator import FashionGenerator
 from src.inference.gemini_baseline import generate_gemini_reference
