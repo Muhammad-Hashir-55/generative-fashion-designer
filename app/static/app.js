@@ -13,6 +13,7 @@ const MODEL_INFO = {
   dcgan: { name:'DCGAN', desc:'Classic adversarial training with spectral normalization and self-attention for stable, high-frequency texture synthesis.' },
   wgan_gp: { name:'WGAN-GP', desc:'Wasserstein distance training with gradient penalty. More stable convergence and meaningful loss curves.' },
   cgan: { name:'cGAN', desc:'Class-conditional generation targeting specific texture categories using projection discriminator.' },
+  latent_dit: { name:'Latent DiT', desc:'State-of-the-art Latent Diffusion model using a Transformer backbone (DiT) on 8x8 latent space.' },
 };
 
 /* ── Init ───────────────────────────────────────── */
@@ -323,7 +324,7 @@ async function loadMetrics() {
 
 function renderMetrics(metrics) {
   const grid = document.getElementById('metricsGrid');
-  const modelNames = { vae:'β-VAE', dcgan:'DCGAN', wgan_gp:'WGAN-GP', cgan:'cGAN' };
+  const modelNames = { vae:'β-VAE', dcgan:'DCGAN', wgan_gp:'WGAN-GP', cgan:'cGAN', latent_dit:'Latent DiT' };
   let html = '';
   for (const [modelId, vals] of Object.entries(metrics)) {
     const rows = Object.entries(vals).map(([k,v]) =>
