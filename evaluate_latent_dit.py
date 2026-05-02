@@ -5,13 +5,13 @@ Generates metrics specifically for the new diffusion transformer model.
 """
 
 import torch
-from src.utils.config import Config
+from src.utils.config import load_config
 from src.evaluation.evaluator import ModelEvaluator
 from src.inference.generator import FashionGenerator
 from src.data.dataloader import create_dataloaders
 
 def main():
-    config = Config()
+    config = load_config()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     print(f"Starting evaluation of Latent DiT on {device}...")
