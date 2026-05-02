@@ -82,7 +82,7 @@ class DDPMTrainer(BaseTrainer):
         with torch.no_grad():
             samples = self.model.sample(num_samples=16, image_size=self.config.data.image_size, channels=self.config.data.channels, device=self.device)
             grid = vutils.make_grid(samples, nrow=4, padding=2, normalize=False)
-            self.logger.log_image("samples", grid, epoch)
+            self.logger.log_images("samples", grid, epoch)
             vutils.save_image(
                 samples,
                 self.generated_dir / f"ddpm_epoch_{epoch:04d}.png",
