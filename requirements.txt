@@ -24,3 +24,10 @@ lightning>=2.3
 
 # Image processing
 Pillow>=10.0
+
+# Web server
+flask>=3.0
+flask-cors>=4.0
+
+# Gemini Vision (optional — for comparison baseline)
+google-generativeai>=0.7
