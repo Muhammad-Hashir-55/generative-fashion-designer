@@ -49,7 +49,7 @@ class CGANTrainer(BaseTrainer):
         self.opt_g = torch.optim.Adam(self.generator.parameters(), lr=lr, betas=betas)
         self.opt_d = torch.optim.Adam(self.discriminator.parameters(), lr=lr, betas=betas)
 
-        self.criterion = nn.BCELoss()
+        self.criterion = nn.BCEWithLogitsLoss()  # AMP-safe
         self.latent_dim = latent_dim
         self.num_classes = num_classes
 
@@ -78,15 +78,13 @@ class CGANTrainer(BaseTrainer):
             self.opt_d.zero_grad()
             with self.autocast():
                 d_real = self.discriminator(images, labels)
-            with self.autocast(enabled=False):
-                loss_d_real = self.criterion(d_real.float(), real_target.float())
+                loss_d_real = self.criterion(d_real, real_target)
 
             z = torch.randn(bs, self.latent_dim, device=self.device)
             with self.autocast():
                 fake = self.generator(z, labels).detach()
                 d_fake = self.discriminator(fake, labels)
-            with self.autocast(enabled=False):
-                loss_d_fake = self.criterion(d_fake.float(), fake_target.float())
+                loss_d_fake = self.criterion(d_fake, fake_target)
 
             loss_d = (loss_d_real + loss_d_fake) / 2
             self.backward_step(
@@ -103,8 +101,7 @@ class CGANTrainer(BaseTrainer):
             with self.autocast():
                 fake = self.generator(z, labels)
                 d_fake_g = self.discriminator(fake, labels)
-            with self.autocast(enabled=False):
-                loss_g = self.criterion(d_fake_g.float(), torch.ones(bs, 1, device=self.device).float())
+                loss_g = self.criterion(d_fake_g, torch.ones(bs, 1, device=self.device))
             self.backward_step(
                 loss_g,
                 self.opt_g,
@@ -127,9 +124,9 @@ class CGANTrainer(BaseTrainer):
         n = 0
         for images, labels in dataloader:
             images, labels = images.to(self.device), labels.to(self.device)
-            with self.autocast(enabled=False):
+            with self.autocast():
                 d_real = self.discriminator(images, labels)
-                d_total += self.criterion(d_real.float(), torch.ones_like(d_real).float()).item()
+                d_total += self.criterion(d_real, torch.ones_like(d_real)).item()
             n += 1
         return {"d_loss": d_total / n}
 

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generative Fashion Designer — AI Texture Studio</title>
+  <meta name="description" content="Deep generative models for fashion texture synthesis. Compare VAE, DCGAN, WGAN-GP, cGAN outputs against Gemini Vision references." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Background FX -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-orb bg-orb-3"></div>
+
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-brand">
+      <div class="nav-logo">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <path d="M14 2L24 8V20L14 26L4 20V8L14 2Z" stroke="url(#logoGrad)" stroke-width="1.5" fill="none"/>
+          <circle cx="14" cy="14" r="4" fill="url(#logoGrad)"/>
+          <defs>
+            <linearGradient id="logoGrad" x1="4" y1="2" x2="24" y2="26" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#7c3aed"/>
+              <stop offset="100%" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <span class="nav-title">Fashion<span class="accent">AI</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="#generate" class="nav-link active" data-section="generate">Generate</a>
+      <a href="#compare" class="nav-link" data-section="compare">Compare</a>
+      <a href="#gallery" class="nav-link" data-section="gallery">Gallery</a>
+      <a href="#metrics" class="nav-link" data-section="metrics">Metrics</a>
+    </div>
+    <div class="nav-status" id="navStatus">
+      <span class="status-dot"></span>
+      <span class="status-text">Connecting...</span>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero" id="home">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-icon">✦</span>
+        Deep Generative Models for Textile Synthesis
+      </div>
+      <h1 class="hero-title">
+        Design Textures with<br/>
+        <span class="gradient-text">Neural Creativity</span>
+      </h1>
+      <p class="hero-subtitle">
+        Generate photorealistic fabric patterns using VAE, DCGAN, WGAN-GP, and cGAN.<br/>
+        Compare against Gemini Vision AI references in real-time.
+      </p>
+      <div class="hero-actions">
+        <button class="btn btn-primary" onclick="scrollToSection('generate')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a1 1 0 0 1 1 1v5h5a1 1 0 0 1 0 2H9v5a1 1 0 0 1-2 0V9H2a1 1 0 0 1 0-2h5V2a1 1 0 0 1 1-1z"/></svg>
+          Start Generating
+        </button>
+        <button class="btn btn-ghost" onclick="scrollToSection('compare')">View Comparison</button>
+      </div>
+      <div class="hero-stats" id="heroStats">
+        <div class="stat-item"><span class="stat-num">4</span><span class="stat-label">Models</span></div>
+        <div class="stat-div"></div>
+        <div class="stat-item"><span class="stat-num">47</span><span class="stat-label">Texture Classes</span></div>
+        <div class="stat-div"></div>
+        <div class="stat-item"><span class="stat-num">64×64</span><span class="stat-label">Resolution</span></div>
+        <div class="stat-div"></div>
+        <div class="stat-item"><span class="stat-num" id="heroGpu">RTX</span><span class="stat-label">GPU Accelerated</span></div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-canvas" id="heroCanvas">
+        <div class="canvas-grid" id="canvasGrid">
+          <!-- Animated sample tiles filled by JS -->
+        </div>
+        <div class="canvas-overlay"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- ── Generate Panel ──────────────────────────────────────────── -->
+    <section class="section" id="generate">
+      <div class="section-header">
+        <h2 class="section-title">Generate Textures</h2>
+        <p class="section-subtitle">Select a model, configure parameters, and synthesize fabric patterns</p>
+      </div>
+
+      <div class="generate-layout">
+        <!-- Controls -->
+        <div class="controls-panel glass-card">
+          <div class="control-group">
+            <label class="control-label">Model Architecture</label>
+            <div class="model-tabs" id="modelTabs" role="tablist">
+              <button class="model-tab active" data-model="vae" role="tab">
+                <span class="tab-icon">⬡</span>
+                <span class="tab-name">VAE</span>
+                <span class="tab-sub">Variational</span>
+              </button>
+              <button class="model-tab" data-model="dcgan" role="tab">
+                <span class="tab-icon">◈</span>
+                <span class="tab-name">DCGAN</span>
+                <span class="tab-sub">Adversarial</span>
+              </button>
+              <button class="model-tab" data-model="wgan_gp" role="tab">
+                <span class="tab-icon">◉</span>
+                <span class="tab-name">WGAN-GP</span>
+                <span class="tab-sub">Wasserstein</span>
+              </button>
+              <button class="model-tab" data-model="cgan" role="tab">
+                <span class="tab-icon">◑</span>
+                <span class="tab-name">cGAN</span>
+                <span class="tab-sub">Conditional</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="control-group" id="classGroup">
+            <label class="control-label" for="classSelect">
+              Texture Class
+              <span class="label-badge">cGAN only</span>
+            </label>
+            <div class="select-wrapper">
+              <select id="classSelect" class="control-select">
+                <option value="">— Random —</option>
+              </select>
+              <svg class="select-arrow" viewBox="0 0 16 16" fill="currentColor"><path d="M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label">
+              Sample Count
+              <span class="label-value" id="sampleCountVal">16</span>
+            </label>
+            <input type="range" id="sampleCount" class="control-range" min="4" max="64" step="4" value="16"
+                   oninput="document.getElementById('sampleCountVal').textContent=this.value" />
+            <div class="range-labels"><span>4</span><span>64</span></div>
+          </div>
+
+          <div class="control-actions">
+            <button class="btn btn-primary btn-full" id="generateBtn" onclick="handleGenerate()">
+              <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 1a1 1 0 0 1 .707.293l5 5A1 1 0 0 1 14 7H9v7a1 1 0 0 1-2 0V7H2a1 1 0 0 1-.707-1.707l5-5A1 1 0 0 1 8 1z"/>
+              </svg>
+              <span id="generateBtnText">Generate</span>
+            </button>
+            <button class="btn btn-secondary btn-full" onclick="handleInterpolate()">
+              <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.09z"/>
+              </svg>
+              Interpolate
+            </button>
+          </div>
+
+          <div class="model-info glass-card-inner" id="modelInfo">
+            <div class="model-info-title">β-VAE</div>
+            <div class="model-info-desc">Learns a structured latent space for smooth interpolation and reconstruction. Uses ResNet encoder + transposed-conv decoder.</div>
+          </div>
+        </div>
+
+        <!-- Output -->
+        <div class="output-panel">
+          <div class="output-header">
+            <div class="output-title" id="outputTitle">Output</div>
+            <div class="output-meta" id="outputMeta"></div>
+            <div class="output-actions">
+              <button class="icon-btn" id="downloadBtn" onclick="downloadOutput()" title="Download" disabled>
+                <svg viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+              </button>
+              <button class="icon-btn" id="fullscreenBtn" onclick="toggleFullscreen()" title="Fullscreen" disabled>
+                <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 1h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 1zm9 0h4A1.5 1.5 0 0 1 16 2.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1 0-1zM.5 10.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="output-display" id="outputDisplay">
+            <div class="output-placeholder" id="outputPlaceholder">
+              <div class="placeholder-icon">
+                <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="4" y="4" width="56" height="56" rx="4"/>
+                  <circle cx="32" cy="28" r="8"/>
+                  <path d="M4 48 L16 36 L28 44 L40 32 L60 48"/>
+                </svg>
+              </div>
+              <p class="placeholder-text">Configure and generate to see output here</p>
+              <p class="placeholder-hint">Try VAE for smooth textures, WGAN-GP for sharper details</p>
+            </div>
+            <div class="output-loading" id="outputLoading" style="display:none">
+              <div class="loading-spinner"></div>
+              <div class="loading-text">Synthesizing textures...</div>
+              <div class="loading-model" id="loadingModel"></div>
+            </div>
+            <img class="output-image" id="outputImage" style="display:none" alt="Generated texture grid" />
+          </div>
+          <div class="output-timestamp" id="outputTimestamp"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Comparison Panel ──────────────────────────────────────────── -->
+    <section class="section" id="compare">
+      <div class="section-header">
+        <h2 class="section-title">Model vs Gemini Vision</h2>
+        <p class="section-subtitle">Side-by-side comparison of our trained models against Google Gemini reference images</p>
+      </div>
+
+      <div class="compare-layout">
+        <div class="compare-controls glass-card">
+          <div class="control-group">
+            <label class="control-label">Texture Class</label>
+            <div class="select-wrapper">
+              <select id="compareClass" class="control-select">
+              </select>
+              <svg class="select-arrow" viewBox="0 0 16 16" fill="currentColor"><path d="M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+            </div>
+          </div>
+          <div class="control-group">
+            <label class="control-label">Compare Model</label>
+            <div class="select-wrapper">
+              <select id="compareModel" class="control-select">
+                <option value="vae">VAE</option>
+                <option value="dcgan">DCGAN</option>
+                <option value="wgan_gp">WGAN-GP</option>
+                <option value="cgan">cGAN</option>
+              </select>
+              <svg class="select-arrow" viewBox="0 0 16 16" fill="currentColor"><path d="M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="handleCompare()">
+            <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-.962-.173L7.19 3.093c-.2.58.283 1.207.88 1.207a.5.5 0 0 0 .5-.5V2.672zm-5.344 5.73a.5.5 0 0 0 .6.787l3.034-2.326a.5.5 0 0 0 0-.788L4.756 3.75a.5.5 0 0 0-.6.786l2.247 1.722-2.247 1.144zM10.5 7.5A2.5 2.5 0 1 1 8 10a2.5 2.5 0 0 1 2.5-2.5z"/>
+            </svg>
+            Run Comparison
+          </button>
+        </div>
+
+        <div class="compare-panels">
+          <div class="compare-side glass-card" id="compareOurSide">
+            <div class="compare-label">
+              <span class="compare-badge our-badge">OUR MODEL</span>
+              <span class="compare-model-name" id="compareOurLabel">—</span>
+            </div>
+            <div class="compare-image-wrap" id="compareOurWrap">
+              <div class="compare-placeholder">
+                <span>Our model output appears here</span>
+              </div>
+            </div>
+            <div class="compare-caption" id="compareOurCaption"></div>
+          </div>
+
+          <div class="compare-divider">
+            <div class="compare-vs">VS</div>
+          </div>
+
+          <div class="compare-side glass-card" id="compareGeminiSide">
+            <div class="compare-label">
+              <span class="compare-badge gemini-badge">GEMINI VISION</span>
+              <span class="compare-model-name">Reference</span>
+            </div>
+            <div class="compare-image-wrap" id="compareGeminiWrap">
+              <div class="compare-placeholder">
+                <span>Gemini reference appears here</span>
+              </div>
+            </div>
+            <div class="compare-caption" id="compareGeminiCaption"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Metrics Panel ──────────────────────────────────────────── -->
+    <section class="section" id="metrics">
+      <div class="section-header">
+        <h2 class="section-title">Model Metrics</h2>
+        <p class="section-subtitle">Quantitative evaluation: FID, Inception Score, and Wasserstein distance</p>
+      </div>
+      <div class="metrics-grid" id="metricsGrid">
+        <div class="metrics-loading">Loading metrics...</div>
+      </div>
+    </section>
+
+    <!-- ── Gallery ──────────────────────────────────────────── -->
+    <section class="section" id="gallery">
+      <div class="section-header">
+        <h2 class="section-title">Generation Gallery</h2>
+        <p class="section-subtitle">History of generated texture samples across all models</p>
+      </div>
+      <div class="gallery-filter">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="vae">VAE</button>
+        <button class="filter-btn" data-filter="dcgan">DCGAN</button>
+        <button class="filter-btn" data-filter="wgan_gp">WGAN-GP</button>
+        <button class="filter-btn" data-filter="cgan">cGAN</button>
+      </div>
+      <div class="gallery-grid" id="galleryGrid">
+        <div class="gallery-loading">Loading gallery...</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <span class="nav-title">Fashion<span class="accent">AI</span></span>
+        <span class="footer-desc">Deep Generative Texture Synthesis</span>
+      </div>
+      <div class="footer-links">
+        <span class="footer-item">DTD Dataset · 47 Classes</span>
+        <span class="footer-sep">·</span>
+        <span class="footer-item">PyTorch 2.x</span>
+        <span class="footer-sep">·</span>
+        <span class="footer-item">CUDA Accelerated</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Image Lightbox -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <div class="lightbox-content" onclick="event.stopPropagation()">
+      <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+      <img id="lightboxImg" src="" alt="Fullscreen view" />
+      <div class="lightbox-caption" id="lightboxCaption"></div>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
