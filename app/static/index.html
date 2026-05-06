@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Generative Fashion Designer — AI Texture Studio</title>
-  <meta name="description" content="Deep generative models for fashion texture synthesis. Compare VAE, DCGAN, WGAN-GP, cGAN outputs against Gemini Vision references." />
+  <meta name="description" content="Deep generative models for fashion texture synthesis." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -35,7 +35,6 @@
     </div>
     <div class="nav-links">
       <a href="#generate" class="nav-link active" data-section="generate">Generate</a>
-      <a href="#compare" class="nav-link" data-section="compare">Compare</a>
       <a href="#gallery" class="nav-link" data-section="gallery">Gallery</a>
       <a href="#metrics" class="nav-link" data-section="metrics">Metrics</a>
     </div>
@@ -57,18 +56,16 @@
         <span class="gradient-text">Neural Creativity</span>
       </h1>
       <p class="hero-subtitle">
-        Generate photorealistic fabric patterns using VAE, DCGAN, WGAN-GP, cGAN, and Latent DiT.<br/>
-        Compare against Gemini Vision AI references in real-time.
+        Generate photorealistic fabric patterns using VAE, DCGAN, WGAN-GP, cGAN, Latent DiT, and SDXL Turbo.
       </p>
       <div class="hero-actions">
         <button class="btn btn-primary" onclick="scrollToSection('generate')">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a1 1 0 0 1 1 1v5h5a1 1 0 0 1 0 2H9v5a1 1 0 0 1-2 0V9H2a1 1 0 0 1 0-2h5V2a1 1 0 0 1 1-1z"/></svg>
           Start Generating
         </button>
-        <button class="btn btn-ghost" onclick="scrollToSection('compare')">View Comparison</button>
       </div>
       <div class="hero-stats" id="heroStats">
-        <div class="stat-item"><span class="stat-num">4</span><span class="stat-label">Models</span></div>
+        <div class="stat-item"><span class="stat-num">6</span><span class="stat-label">Models</span></div>
         <div class="stat-div"></div>
         <div class="stat-item"><span class="stat-num">47</span><span class="stat-label">Texture Classes</span></div>
         <div class="stat-div"></div>
@@ -128,6 +125,11 @@
                 <span class="tab-name">Latent DiT</span>
                 <span class="tab-sub">Diffusion</span>
               </button>
+              <button class="model-tab" data-model="sdxl_turbo" role="tab">
+                <span class="tab-icon">⬢</span>
+                <span class="tab-name">SDXL</span>
+                <span class="tab-sub">Turbo</span>
+              </button>
             </div>
           </div>
 
@@ -144,7 +146,16 @@
             </div>
           </div>
 
-          <div class="control-group">
+          <div class="control-group" id="sdxlPromptGroup" style="display:none">
+            <label class="control-label" for="sdxlPrompt">
+              SDXL Prompt
+              <span class="label-badge">SDXL only</span>
+            </label>
+            <textarea id="sdxlPrompt" class="control-textarea" rows="6">Create a premium square textile swatch inspired by Pakistani Ajrak motifs, deep indigo and madder red, intricate geometric block-print pattern, rich fabric detail, studio lighting, centered composition, no text, no watermark.</textarea>
+            <div class="control-hint">Runs locally through `stabilityai/sdxl-turbo`. Extremely fast generation with 1 inference step.</div>
+          </div>
+
+          <div class="control-group" id="sampleGroup">
             <label class="control-label">
               Sample Count
               <span class="label-value" id="sampleCountVal">16</span>
@@ -161,7 +172,7 @@
               </svg>
               <span id="generateBtnText">Generate</span>
             </button>
-            <button class="btn btn-secondary btn-full" onclick="handleInterpolate()">
+            <button class="btn btn-secondary btn-full" id="interpolateBtn" onclick="handleInterpolate()">
               <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.09z"/>
               </svg>
@@ -213,77 +224,7 @@
       </div>
     </section>
 
-    <!-- ── Comparison Panel ──────────────────────────────────────────── -->
-    <section class="section" id="compare">
-      <div class="section-header">
-        <h2 class="section-title">Model vs Gemini Vision</h2>
-        <p class="section-subtitle">Side-by-side comparison of our trained models against Google Gemini reference images</p>
-      </div>
 
-      <div class="compare-layout">
-        <div class="compare-controls glass-card">
-          <div class="control-group">
-            <label class="control-label">Texture Class</label>
-            <div class="select-wrapper">
-              <select id="compareClass" class="control-select">
-              </select>
-              <svg class="select-arrow" viewBox="0 0 16 16" fill="currentColor"><path d="M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
-            </div>
-          </div>
-          <div class="control-group">
-            <label class="control-label">Compare Model</label>
-            <div class="select-wrapper">
-              <select id="compareModel" class="control-select">
-                <option value="vae">VAE</option>
-                <option value="dcgan">DCGAN</option>
-                <option value="wgan_gp">WGAN-GP</option>
-                <option value="cgan">cGAN</option>
-                <option value="latent_dit">Latent DiT</option>
-              </select>
-              <svg class="select-arrow" viewBox="0 0 16 16" fill="currentColor"><path d="M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
-            </div>
-          </div>
-          <button class="btn btn-primary btn-full" onclick="handleCompare()">
-            <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-.962-.173L7.19 3.093c-.2.58.283 1.207.88 1.207a.5.5 0 0 0 .5-.5V2.672zm-5.344 5.73a.5.5 0 0 0 .6.787l3.034-2.326a.5.5 0 0 0 0-.788L4.756 3.75a.5.5 0 0 0-.6.786l2.247 1.722-2.247 1.144zM10.5 7.5A2.5 2.5 0 1 1 8 10a2.5 2.5 0 0 1 2.5-2.5z"/>
-            </svg>
-            Run Comparison
-          </button>
-        </div>
-
-        <div class="compare-panels">
-          <div class="compare-side glass-card" id="compareOurSide">
-            <div class="compare-label">
-              <span class="compare-badge our-badge">OUR MODEL</span>
-              <span class="compare-model-name" id="compareOurLabel">—</span>
-            </div>
-            <div class="compare-image-wrap" id="compareOurWrap">
-              <div class="compare-placeholder">
-                <span>Our model output appears here</span>
-              </div>
-            </div>
-            <div class="compare-caption" id="compareOurCaption"></div>
-          </div>
-
-          <div class="compare-divider">
-            <div class="compare-vs">VS</div>
-          </div>
-
-          <div class="compare-side glass-card" id="compareGeminiSide">
-            <div class="compare-label">
-              <span class="compare-badge gemini-badge">GEMINI VISION</span>
-              <span class="compare-model-name">Reference</span>
-            </div>
-            <div class="compare-image-wrap" id="compareGeminiWrap">
-              <div class="compare-placeholder">
-                <span>Gemini reference appears here</span>
-              </div>
-            </div>
-            <div class="compare-caption" id="compareGeminiCaption"></div>
-          </div>
-        </div>
-      </div>
-    </section>
 
     <!-- ── Metrics Panel ──────────────────────────────────────────── -->
     <section class="section" id="metrics">
@@ -309,6 +250,7 @@
         <button class="filter-btn" data-filter="wgan_gp">WGAN-GP</button>
         <button class="filter-btn" data-filter="cgan">cGAN</button>
         <button class="filter-btn" data-filter="latent_dit">Latent DiT</button>
+        <button class="filter-btn" data-filter="sdxl_turbo">SDXL Turbo</button>
       </div>
       <div class="gallery-grid" id="galleryGrid">
         <div class="gallery-loading">Loading gallery...</div>

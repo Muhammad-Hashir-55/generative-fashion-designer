@@ -47,8 +47,8 @@ generative-fashion-designer/
 | 2 | **DCGAN** | Spectral norm, self-attention, minibatch stddev, label smoothing | Radford et al., 2016 |
 | 3 | **WGAN-GP** | Gradient penalty (λ=10), 5:1 critic ratio, Wasserstein distance | Gulrajani et al., 2017 |
 | 4 | **Conditional GAN** | Projection discriminator, class embeddings | Miyato & Koyama, 2018 |
-| 5 | **VGG-19 NST** | Gram matrix style loss, total variation, L-BFGS optimization | Gatys et al., 2015 |
-| 6 | **CVAE-GAN Fusion** | Triple loss (recon + KL + adversarial), VAE encoder + GAN decoder | Larsen et al., 2016 |
+| 5 | **Latent DiT** | Latent space Diffusion Transformer, DDPM | Peebles & Xie, 2022 |
+| 6 | **SDXL Turbo** | Fast one-step text-to-image generation | Stability AI, 2023 |
 
 ### Advanced Components Used Across Models
 - **Self-Attention Layers** (SA-GAN, Zhang et al., 2019)
@@ -108,8 +108,8 @@ python scripts/train.py --model wgan_gp --epochs 80
 # Train Conditional GAN
 python scripts/train.py --model cgan --epochs 80
 
-# Train CVAE-GAN Fusion
-python scripts/train.py --model fusion --epochs 60
+# Train Latent DiT
+python scripts/train.py --model latent_dit --epochs 100
 ```
 
 ### 3. Generate Samples

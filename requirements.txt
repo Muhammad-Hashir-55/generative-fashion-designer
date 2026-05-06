@@ -6,6 +6,9 @@
 torch>=2.2
 torchvision>=0.17
 numpy>=1.24
+diffusers>=0.30
+transformers>=4.0
+accelerate>=0.30
 
 # Config
 pyyaml>=6.0

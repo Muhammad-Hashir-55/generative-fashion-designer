@@ -43,7 +43,11 @@ from PIL import Image
 # Import only what we need — bypass src/__init__ to avoid tensorboard/TF protobuf conflict
 from src.utils.config import load_config
 from src.inference.generator import FashionGenerator
-from src.inference.gemini_baseline import generate_gemini_reference
+from src.inference.sdxl_generator import (
+    default_sdxl_prompt,
+    generate_sdxl_image,
+    get_sdxl_model_id,
+)
 from src.data.dataset import DTD_CLASSES
 
 # ─── App Setup ──────────────────────────────────────────────────────────────
@@ -59,12 +63,14 @@ GENERATED_DIR = PROJECT_ROOT / "outputs" / "generated"
 GALLERY_DIR = PROJECT_ROOT / "outputs" / "gallery"
 GALLERY_DIR.mkdir(parents=True, exist_ok=True)
 
-AVAILABLE_MODELS = ["vae", "dcgan", "wgan_gp", "cgan", "latent_dit"]  # fusion excluded (unstable)
+AVAILABLE_MODELS = ["vae", "dcgan", "wgan_gp", "cgan", "latent_dit", "sdxl_turbo"]  # fusion excluded (unstable)
 _generators: dict[str, FashionGenerator] = {}
 
 
 def _get_generator(model_type: str) -> FashionGenerator:
     """Lazy-load and cache model generators."""
+    if model_type == "sdxl_turbo":
+        raise ValueError("SDXL Turbo generation does not use the local FashionGenerator wrapper.")
     if model_type not in _generators:
         gen = FashionGenerator(config, model_type=model_type, device=device)
         ckpt = CHECKPOINT_DIR / f"{model_type}_best.pt"
@@ -80,6 +86,13 @@ def _tensor_to_b64(tensor: torch.Tensor, nrow: int = 8) -> str:
     # grid is [C, H, W] float in [0, 1]
     arr = (grid.permute(1, 2, 0).cpu().numpy() * 255).clip(0, 255).astype("uint8")
     img = Image.fromarray(arr)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+def _pil_to_b64(img: Image.Image) -> str:
+    """Convert a PIL image to a base64-encoded PNG."""
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return base64.b64encode(buf.getvalue()).decode()
@@ -108,6 +121,17 @@ def get_models():
     """Return list of models and their checkpoint availability."""
     models = []
     for m in AVAILABLE_MODELS:
+        if m == "sdxl_turbo":
+            models.append({
+                "id": m,
+                "name": _model_display_name(m),
+                "available": True,
+                "checkpoint": None,
+                "size_mb": 0,
+                "description": _model_description(m),
+                "remote_model": get_sdxl_model_id(),
+            })
+            continue
         ckpt = CHECKPOINT_DIR / f"{m}_best.pt"
         size_mb = round(ckpt.stat().st_size / 1e6, 1) if ckpt.exists() else 0
         models.append({
@@ -137,11 +161,47 @@ def generate():
     model_type = data.get("model", "vae")
     num_samples = min(int(data.get("num_samples", 16)), 64)
     class_label = data.get("class_label", None)
+    prompt = (data.get("prompt") or "").strip()
 
     if model_type not in AVAILABLE_MODELS:
         return jsonify({"error": f"Unknown model '{model_type}'"}), 400
 
     try:
+        if model_type == "sdxl_turbo":
+            if not prompt:
+                prompt = default_sdxl_prompt()
+
+            result = generate_sdxl_image(
+                prompt=prompt,
+                height=int(data.get("height", 512)),
+                width=int(data.get("width", 512)),
+                guidance_scale=float(data.get("guidance_scale", 0.0)),
+                num_inference_steps=int(data.get("num_inference_steps", 1)),
+                seed=int(data.get("seed", 0)),
+                device=device,
+            )
+            image = result["image"]
+            b64 = _pil_to_b64(image)
+            ts = int(time.time())
+            gallery_path = GALLERY_DIR / f"{model_type}_{ts}.png"
+            image.save(gallery_path)
+
+            return jsonify({
+                "b64": b64,
+                "model": model_type,
+                "num_samples": 1,
+                "class_label": class_label,
+                "prompt": prompt,
+                "provider_model": result.get("model", get_sdxl_model_id()),
+                "seed": result.get("seed"),
+                "height": result.get("height"),
+                "width": result.get("width"),
+                "guidance_scale": result.get("guidance_scale"),
+                "num_inference_steps": result.get("num_inference_steps"),
+                "timestamp": ts,
+                "gallery_id": f"{model_type}_{ts}",
+            })
+
         gen = _get_generator(model_type)
         with torch.no_grad():
             images = gen.generate(num_samples, class_label=class_label)
@@ -163,6 +223,13 @@ def generate():
             "timestamp": ts,
             "gallery_id": f"{model_type}_{ts}",
         })
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except RuntimeError as e:
+        message = str(e)
+        if "Hugging Face authentication" in message or "gated on Hugging Face" in message:
+            return jsonify({"error": message}), 400
+        return jsonify({"error": message}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -176,6 +243,8 @@ def interpolate():
 
     if model_type not in AVAILABLE_MODELS:
         return jsonify({"error": f"Unknown model '{model_type}'"}), 400
+    if model_type == "sdxl_turbo":
+        return jsonify({"error": "Interpolation is not supported for SDXL Turbo."}), 400
 
     try:
         gen = _get_generator(model_type)
@@ -186,18 +255,7 @@ def interpolate():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/gemini-compare", methods=["POST"])
-def gemini_compare():
-    """Get Gemini Vision reference image for comparison."""
-    data = request.get_json(force=True) or {}
-    class_name = data.get("class_name", "woven")
-    size = int(data.get("size", 256))
 
-    try:
-        result = generate_gemini_reference(class_name, image_size=size)
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/gallery")
@@ -280,6 +338,7 @@ def _model_display_name(m: str) -> str:
         "wgan_gp": "Wasserstein GAN + GP (WGAN-GP)",
         "cgan": "Conditional GAN (cGAN)",
         "latent_dit": "Latent Diffusion Transformer (DiT)",
+        "sdxl_turbo": "SDXL Turbo",
         "fusion": "CVAE-GAN Fusion",
     }.get(m, m.upper())
 
@@ -291,6 +350,7 @@ def _model_description(m: str) -> str:
         "wgan_gp": "Wasserstein distance training with gradient penalty for stable convergence.",
         "cgan": "Class-conditional generation targeting specific texture categories.",
         "latent_dit": "State-of-the-art Latent Diffusion model using a Transformer backbone (DiT).",
+        "sdxl_turbo": "Extremely fast prompt-driven local image generation using stabilityai/sdxl-turbo.",
         "fusion": "Hybrid CVAE+GAN combining reconstruction quality with adversarial sharpness.",
     }.get(m, "Generative model for texture synthesis.")
 

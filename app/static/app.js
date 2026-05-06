@@ -14,6 +14,7 @@ const MODEL_INFO = {
   wgan_gp: { name:'WGAN-GP', desc:'Wasserstein distance training with gradient penalty. More stable convergence and meaningful loss curves.' },
   cgan: { name:'cGAN', desc:'Class-conditional generation targeting specific texture categories using projection discriminator.' },
   latent_dit: { name:'Latent DiT', desc:'State-of-the-art Latent Diffusion model using a Transformer backbone (DiT) on 8x8 latent space.' },
+  sdxl_turbo: { name:'SDXL Turbo', desc:'Extremely fast prompt-driven local image generation using stabilityai/sdxl-turbo.' },
 };
 
 /* ── Init ───────────────────────────────────────── */
@@ -34,7 +35,7 @@ function initNavScroll() {
   const navbar = document.getElementById('navbar');
   window.addEventListener('scroll', () => {
     navbar.classList.toggle('scrolled', window.scrollY > 20);
-    const sections = ['generate','compare','metrics','gallery'];
+    const sections = ['generate','metrics','gallery'];
     let active = 'generate';
     for (const id of sections) {
       const el = document.getElementById(id);
@@ -91,16 +92,12 @@ async function loadClasses() {
   try {
     const r = await fetch(`${API}/api/classes`);
     const d = await r.json();
-    const selects = ['classSelect','compareClass'];
-    for (const sid of selects) {
-      const sel = document.getElementById(sid);
-      if (!sel) continue;
-      if (sid === 'classSelect') sel.innerHTML = '<option value="">— Random —</option>';
-      else sel.innerHTML = '';
-      d.classes.forEach((c,i) => {
+    const sel = document.getElementById('classSelect');
+    if (sel) {
+      sel.innerHTML = '<option value="">— Random —</option>';
+      d.classes.forEach(c => {
         const opt = document.createElement('option');
         opt.value = c; opt.textContent = c.charAt(0).toUpperCase()+c.slice(1);
-        if (sid === 'compareClass' && i === 0) opt.selected = true;
         sel.appendChild(opt);
       });
     }
@@ -115,12 +112,11 @@ function initModelTabs() {
       tab.classList.add('active');
       currentModel = tab.dataset.model;
       updateModelInfo();
-      // Show class selector only for cGAN
-      const classGroup = document.getElementById('classGroup');
-      if (classGroup) classGroup.style.opacity = currentModel === 'cgan' ? '1' : '0.4';
+      syncControlVisibility();
     });
   });
   updateModelInfo();
+  syncControlVisibility();
 }
 
 function updateModelInfo() {
@@ -133,12 +129,32 @@ function updateModelInfo() {
   document.getElementById('outputTitle').textContent = `Output · ${(info.name || currentModel)}`;
 }
 
+function syncControlVisibility() {
+  const classGroup = document.getElementById('classGroup');
+  const promptGroup = document.getElementById('sdxlPromptGroup');
+  const sampleGroup = document.getElementById('sampleGroup');
+  const sampleInput = document.getElementById('sampleCount');
+  const interpolateBtn = document.getElementById('interpolateBtn');
+
+  if (classGroup) classGroup.style.display = currentModel === 'cgan' ? 'flex' : 'none';
+  if (promptGroup) promptGroup.style.display = currentModel === 'sdxl_turbo' ? 'flex' : 'none';
+  if (sampleGroup) sampleGroup.style.display = currentModel === 'sdxl_turbo' ? 'none' : 'flex';
+  if (sampleInput) sampleInput.disabled = currentModel === 'sdxl_turbo';
+  if (interpolateBtn) interpolateBtn.disabled = currentModel === 'sdxl_turbo';
+}
+
 /* ── Generate ────────────────────────────────────── */
 async function handleGenerate() {
   const btn = document.getElementById('generateBtn');
   const btnText = document.getElementById('generateBtnText');
   const num = parseInt(document.getElementById('sampleCount').value);
   const classLabel = currentModel === 'cgan' ? document.getElementById('classSelect').value || null : null;
+  const prompt = currentModel === 'sdxl_turbo' ? document.getElementById('sdxlPrompt').value.trim() : '';
+
+  if (currentModel === 'sdxl_turbo' && !prompt) {
+    showToast('Enter a SDXL prompt before generating.', 'error');
+    return;
+  }
 
   setOutputLoading(true);
   btn.disabled = true;
@@ -148,12 +164,18 @@ async function handleGenerate() {
     const r = await fetch(`${API}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: currentModel, num_samples: num, class_label: classLabel }),
+      body: JSON.stringify({ model: currentModel, num_samples: num, class_label: classLabel, prompt }),
     });
     const d = await r.json();
     if (d.error) throw new Error(d.error);
     showOutput(d.b64, d);
-    showToast(`Generated ${num} samples with ${currentModel.toUpperCase()}`, 'success');
+    const modelName = (MODEL_INFO[currentModel] || {}).name || currentModel.toUpperCase();
+    const itemCount = d.num_samples || (currentModel === 'sdxl_turbo' ? 1 : num);
+    if (currentModel === 'sdxl_turbo') {
+      showToast(`Generated 1 image with ${modelName}`, 'success');
+    } else {
+      showToast(`Generated ${itemCount} samples with ${modelName}`, 'success');
+    }
     loadGallery();
   } catch(e) {
     showToast('Generation failed: ' + e.message, 'error');
@@ -165,6 +187,10 @@ async function handleGenerate() {
 }
 
 async function handleInterpolate() {
+  if (currentModel === 'sdxl_turbo') {
+    showToast('Interpolation is only available for the latent local models, not SDXL Turbo.', 'error');
+    return;
+  }
   setOutputLoading(true);
   try {
     const r = await fetch(`${API}/api/interpolate`, {
@@ -212,8 +238,12 @@ function showOutput(b64, meta) {
   img.style.display = 'block';
   img.onclick = () => openLightbox(`data:image/png;base64,${b64}`, `${meta.model?.toUpperCase()} · ${meta.num_samples} samples`);
 
+  const modelName = (MODEL_INFO[meta.model] || {}).name || meta.model;
+  const promptSuffix = meta.prompt ? ` · "${meta.prompt.slice(0, 72)}${meta.prompt.length > 72 ? '…' : ''}"` : '';
   document.getElementById('outputMeta').textContent =
-    `${meta.num_samples} samples · ${meta.model}${meta.class_label ? ` · ${meta.class_label}` : ''}`;
+    meta.model === 'sdxl_turbo'
+      ? `${modelName}${promptSuffix}`
+      : `${meta.num_samples} samples · ${modelName}${meta.class_label ? ` · ${meta.class_label}` : ''}`;
   document.getElementById('outputTimestamp').textContent =
     meta.timestamp ? `generated at ${new Date(meta.timestamp*1000).toLocaleTimeString()}` : '';
 
@@ -240,76 +270,6 @@ function toggleFullscreen() {
     `${lastMeta.model?.toUpperCase()} · ${lastMeta.num_samples} samples`);
 }
 
-/* ── Compare ─────────────────────────────────────── */
-async function handleCompare() {
-  const cls = document.getElementById('compareClass').value;
-  const mdl = document.getElementById('compareModel').value;
-
-  setCompareLoading(true);
-
-  try {
-    // Run both in parallel
-    const [genRes, gemRes] = await Promise.all([
-      fetch(`${API}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: mdl, num_samples: 9, class_label: mdl === 'cgan' ? cls : null }),
-      }).then(r => r.json()),
-      fetch(`${API}/api/gemini-compare`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ class_name: cls, size: 256 }),
-      }).then(r => r.json()),
-    ]);
-
-    // Our model output
-    const ourWrap = document.getElementById('compareOurWrap');
-    const ourLabel = document.getElementById('compareOurLabel');
-    const ourCap = document.getElementById('compareOurCaption');
-    if (!genRes.error) {
-      ourWrap.innerHTML = '';
-      const img = document.createElement('img');
-      img.src = `data:image/png;base64,${genRes.b64}`;
-      img.alt = `${mdl} generated ${cls}`;
-      img.onclick = () => openLightbox(img.src, `${mdl.toUpperCase()} output — ${cls}`);
-      ourWrap.appendChild(img);
-      ourLabel.textContent = mdl.toUpperCase();
-      ourCap.textContent = `${mdl} · 9 samples${mdl === 'cgan' ? ` · ${cls}` : ''}`;
-    } else {
-      ourWrap.innerHTML = `<div class="compare-placeholder"><span>Error: ${genRes.error}</span></div>`;
-    }
-
-    // Gemini reference
-    const gemWrap = document.getElementById('compareGeminiWrap');
-    const gemCap = document.getElementById('compareGeminiCaption');
-    if (!gemRes.error) {
-      gemWrap.innerHTML = '';
-      const img = document.createElement('img');
-      img.src = `data:image/png;base64,${gemRes.b64}`;
-      img.alt = `Gemini reference for ${cls}`;
-      img.onclick = () => openLightbox(img.src, `Gemini Vision reference — ${cls}`);
-      gemWrap.appendChild(img);
-      const srcLabel = gemRes.source === 'gemini' ? 'Gemini Vision API' :
-                       gemRes.source === 'gemini_cached' ? 'Gemini (cached)' :
-                       'Procedural fallback';
-      gemCap.textContent = `${srcLabel} · ${cls}`;
-    } else {
-      gemWrap.innerHTML = `<div class="compare-placeholder"><span>Error: ${gemRes.error}</span></div>`;
-    }
-
-    showToast('Comparison ready', 'success');
-  } catch(e) {
-    showToast('Comparison failed: ' + e.message, 'error');
-  }
-}
-
-function setCompareLoading(isLoading) {
-  const ids = ['compareOurWrap', 'compareGeminiWrap'];
-  for (const id of ids) {
-    const el = document.getElementById(id);
-    if (el && isLoading) el.innerHTML = '<div class="compare-placeholder shimmer" style="min-height:200px;width:100%"></div>';
-  }
-}
 
 /* ── Metrics ─────────────────────────────────────── */
 async function loadMetrics() {
