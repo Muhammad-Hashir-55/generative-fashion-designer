@@ -131,16 +131,16 @@ function updateModelInfo() {
 
 function syncControlVisibility() {
   const classGroup = document.getElementById('classGroup');
-  const promptGroup = document.getElementById('sdxlPromptGroup');
+  const replicatePromptGroup = document.getElementById('replicatePromptGroup');
   const sampleGroup = document.getElementById('sampleGroup');
   const sampleInput = document.getElementById('sampleCount');
   const interpolateBtn = document.getElementById('interpolateBtn');
 
   if (classGroup) classGroup.style.display = currentModel === 'cgan' ? 'flex' : 'none';
-  if (promptGroup) promptGroup.style.display = currentModel === 'sdxl_turbo' ? 'flex' : 'none';
-  if (sampleGroup) sampleGroup.style.display = currentModel === 'sdxl_turbo' ? 'none' : 'flex';
-  if (sampleInput) sampleInput.disabled = currentModel === 'sdxl_turbo';
-  if (interpolateBtn) interpolateBtn.disabled = currentModel === 'sdxl_turbo';
+  if (replicatePromptGroup) replicatePromptGroup.style.display = currentModel === 'replicate_flux' ? 'flex' : 'none';
+  if (sampleGroup) sampleGroup.style.display = currentModel === 'replicate_flux' ? 'none' : 'flex';
+  if (sampleInput) sampleInput.disabled = currentModel === 'replicate_flux';
+  if (interpolateBtn) interpolateBtn.disabled = currentModel === 'replicate_flux';
 }
 
 /* ── Generate ────────────────────────────────────── */
@@ -149,10 +149,10 @@ async function handleGenerate() {
   const btnText = document.getElementById('generateBtnText');
   const num = parseInt(document.getElementById('sampleCount').value);
   const classLabel = currentModel === 'cgan' ? document.getElementById('classSelect').value || null : null;
-  const prompt = currentModel === 'sdxl_turbo' ? document.getElementById('sdxlPrompt').value.trim() : '';
+  const prompt = currentModel === 'replicate_flux' ? document.getElementById('replicatePrompt').value.trim() : '';
 
-  if (currentModel === 'sdxl_turbo' && !prompt) {
-    showToast('Enter a SDXL prompt before generating.', 'error');
+  if (currentModel === 'replicate_flux' && !prompt) {
+    showToast('Enter a prompt before generating.', 'error');
     return;
   }
 
@@ -170,8 +170,8 @@ async function handleGenerate() {
     if (d.error) throw new Error(d.error);
     showOutput(d.b64, d);
     const modelName = (MODEL_INFO[currentModel] || {}).name || currentModel.toUpperCase();
-    const itemCount = d.num_samples || (currentModel === 'sdxl_turbo' ? 1 : num);
-    if (currentModel === 'sdxl_turbo') {
+    const itemCount = d.num_samples || (currentModel === 'replicate_flux' ? 1 : num);
+    if (currentModel === 'replicate_flux') {
       showToast(`Generated 1 image with ${modelName}`, 'success');
     } else {
       showToast(`Generated ${itemCount} samples with ${modelName}`, 'success');

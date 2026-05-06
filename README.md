@@ -48,7 +48,7 @@ generative-fashion-designer/
 | 3 | **WGAN-GP** | Gradient penalty (λ=10), 5:1 critic ratio, Wasserstein distance | Gulrajani et al., 2017 |
 | 4 | **Conditional GAN** | Projection discriminator, class embeddings | Miyato & Koyama, 2018 |
 | 5 | **Latent DiT** | Latent space Diffusion Transformer, DDPM | Peebles & Xie, 2022 |
-| 6 | **SDXL Turbo** | Fast one-step text-to-image generation | Stability AI, 2023 |
+| 6 | **FLUX.2 Pro** | High quality Replicate API text-to-image generation | Black Forest Labs, 2024 |
 
 ### Advanced Components Used Across Models
 - **Self-Attention Layers** (SA-GAN, Zhang et al., 2019)

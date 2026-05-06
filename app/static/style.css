@@ -373,7 +373,7 @@ body {
 .badge-wgan_gp { background: rgba(16,185,129,0.15); color: #34d399; }
 .badge-cgan { background: rgba(245,158,11,0.15); color: #fbbf24; }
 .badge-latent_dit { background: rgba(236, 72, 153, 0.15); color: #ec4899; }
-.badge-sdxl_turbo { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.badge-replicate_flux { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
 .gallery-time { font-size: 10px; color: var(--text-3); }
 .gallery-loading { color: var(--text-3); padding: 32px; grid-column: 1/-1; text-align: center; }
 

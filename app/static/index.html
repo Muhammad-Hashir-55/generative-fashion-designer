@@ -56,7 +56,7 @@
         <span class="gradient-text">Neural Creativity</span>
       </h1>
       <p class="hero-subtitle">
-        Generate photorealistic fabric patterns using VAE, DCGAN, WGAN-GP, cGAN, Latent DiT, and SDXL Turbo.
+        Generate photorealistic fabric patterns using VAE, DCGAN, WGAN-GP, cGAN, Latent DiT, and FLUX.2 Pro (Replicate).
       </p>
       <div class="hero-actions">
         <button class="btn btn-primary" onclick="scrollToSection('generate')">
@@ -125,10 +125,10 @@
                 <span class="tab-name">Latent DiT</span>
                 <span class="tab-sub">Diffusion</span>
               </button>
-              <button class="model-tab" data-model="sdxl_turbo" role="tab">
-                <span class="tab-icon">⬢</span>
-                <span class="tab-name">SDXL</span>
-                <span class="tab-sub">Turbo</span>
+              <button class="model-tab" data-model="replicate_flux" role="tab">
+                <span class="tab-icon">☁️</span>
+                <span class="tab-name">FLUX.2</span>
+                <span class="tab-sub">API</span>
               </button>
             </div>
           </div>
@@ -146,13 +146,13 @@
             </div>
           </div>
 
-          <div class="control-group" id="sdxlPromptGroup" style="display:none">
-            <label class="control-label" for="sdxlPrompt">
-              SDXL Prompt
-              <span class="label-badge">SDXL only</span>
+          <div class="control-group" id="replicatePromptGroup" style="display:none">
+            <label class="control-label" for="replicatePrompt">
+              FLUX Prompt
+              <span class="label-badge">FLUX API</span>
             </label>
-            <textarea id="sdxlPrompt" class="control-textarea" rows="6">Create a premium square textile swatch inspired by Pakistani Ajrak motifs, deep indigo and madder red, intricate geometric block-print pattern, rich fabric detail, studio lighting, centered composition, no text, no watermark.</textarea>
-            <div class="control-hint">Runs locally through `stabilityai/sdxl-turbo`. Extremely fast generation with 1 inference step.</div>
+            <textarea id="replicatePrompt" class="control-textarea" rows="6">Create a premium square textile swatch inspired by Pakistani Ajrak motifs, deep indigo and madder red, intricate geometric block-print pattern, rich fabric detail, studio lighting, centered composition, no text, no watermark.</textarea>
+            <div class="control-hint">Generates using black-forest-labs/flux-2-pro through the Replicate API.</div>
           </div>
 
           <div class="control-group" id="sampleGroup">
@@ -250,7 +250,7 @@
         <button class="filter-btn" data-filter="wgan_gp">WGAN-GP</button>
         <button class="filter-btn" data-filter="cgan">cGAN</button>
         <button class="filter-btn" data-filter="latent_dit">Latent DiT</button>
-        <button class="filter-btn" data-filter="sdxl_turbo">SDXL Turbo</button>
+        <button class="filter-btn" data-filter="replicate_flux">FLUX.2 Pro</button>
       </div>
       <div class="gallery-grid" id="galleryGrid">
         <div class="gallery-loading">Loading gallery...</div>

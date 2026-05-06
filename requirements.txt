@@ -34,3 +34,5 @@ flask-cors>=4.0
 
 # Gemini Vision (optional — for comparison baseline)
 google-generativeai>=0.7
+replicate
+python-dotenv
