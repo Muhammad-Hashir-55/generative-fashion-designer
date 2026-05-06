@@ -83,7 +83,13 @@ Auto-downloaded via `torchvision.datasets.FashionMNIST`.
 
 ## 🚀 Quick Start
 
-### 1. Visualize the Dataset
+### 1. Setup Environment (For FLUX.2 Pro API)
+Create a `.env` file in the root directory to enable the Replicate API for FLUX generation:
+```bash
+REPLICATE_API_TOKEN=your_replicate_token_here
+```
+
+### 2. Visualize the Dataset
 ```bash
 python scripts/visualize_data.py
 ```
