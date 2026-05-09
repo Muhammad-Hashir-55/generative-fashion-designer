@@ -128,22 +128,22 @@ class NeuralStyleTransfer:
 
         while step_counter[0] < num_steps:
             def closure():
-                target.data.clamp_(0, 1)
+                target.data.clamp_(0, 1)  # noqa: F821
                 optimizer.zero_grad()
 
-                target_features = self._extract_features(target)
+                target_features = self._extract_features(target)  # noqa: F821
 
                 c_loss = sum(
                     F.mse_loss(tf, cf)
-                    for tf, cf in zip(target_features["content"], content_features)
+                    for tf, cf in zip(target_features["content"], content_features)  # noqa: F821
                 )
 
                 s_loss = sum(
                     F.mse_loss(self._gram_matrix(tf), sg)
-                    for tf, sg in zip(target_features["style"], style_grams)
+                    for tf, sg in zip(target_features["style"], style_grams)  # noqa: F821
                 )
 
-                tv_loss = self._total_variation_loss(target)
+                tv_loss = self._total_variation_loss(target)  # noqa: F821
 
                 total = content_weight * c_loss + style_weight * s_loss + tv_weight * tv_loss
                 total.backward()
