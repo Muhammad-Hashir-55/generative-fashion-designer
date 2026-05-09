@@ -70,12 +70,11 @@ jobs:
         git config --global user.name "GitHub Action"
 
         # Create a temporary directory for a clean push
-        mkdir deploy_temp
-        cp -r . deploy_temp/
-        cd deploy_temp
+        mkdir ../deploy_temp
+        cp -r . ../deploy_temp
+        cd ../deploy_temp
         rm -rf .git
         rm -rf data  # ABSOLUTELY ensure data is not pushed
-        rm -rf deploy_temp # Don't copy yourself
 
         # Initialize fresh repo
         git init -b main
