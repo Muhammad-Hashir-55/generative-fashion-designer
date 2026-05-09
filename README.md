@@ -223,3 +223,4 @@ python scripts/train.py --model vae --lr 0.001 --batch-size 256 --epochs 100
 - Inception Score with configurable splits
 - SSIM with Gaussian windowing
 - Markdown comparison reports across all models
+
