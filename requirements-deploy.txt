@@ -1,0 +1,28 @@
+# ═══════════════════════════════════════════════════════════════
+#  Deployment Dependencies (HF Spaces — CPU only)
+#  torch + torchvision installed separately via CPU wheel in Dockerfile
+# ═══════════════════════════════════════════════════════════════
+
+# Web server
+flask>=3.0
+flask-cors>=4.0
+
+# Config
+pyyaml>=6.0
+
+# Image processing
+Pillow>=10.0
+numpy>=1.24
+
+# Replicate API (FLUX.2 Pro)
+replicate
+python-dotenv
+
+# Required by model import chain (even if not actively training)
+diffusers>=0.30
+transformers>=4.0
+accelerate>=0.30
+tqdm>=4.65
+tensorboard>=2.14
+matplotlib>=3.7
+scikit-learn>=1.3

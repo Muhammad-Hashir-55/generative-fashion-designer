@@ -1,0 +1,39 @@
+# Git
+.git
+.github
+
+# Virtual environments
+.venv
+venv
+env
+
+# Secrets
+.env
+
+# Large training outputs (Allow only best models in the image)
+outputs/checkpoints/*_epoch_*.pt
+!outputs/checkpoints/*_best.pt
+outputs/logs/
+data/dtd/
+
+# Bytecode
+__pycache__
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Model weights (too large for Docker image)
+# *.pth
+# *.ckpt
+# *.h5
+
+# Notebooks
+*.ipynb

@@ -9,12 +9,16 @@ __pycache__/
 *.tar.gz
 *.tar
 
-# Training outputs
-outputs/
+# Training outputs (Keep 'best' models for deployment, ignore others)
+outputs/logs/
+outputs/evaluation/
+outputs/generated/
+outputs/checkpoints/*_epoch_*.pt
+!outputs/checkpoints/*_best.pt
 *.log
-*.pth
-*.ckpt
-*.h5
+# *.pth
+# *.ckpt
+# *.h5
 
 # OS generated files
 .DS_Store
@@ -29,3 +33,4 @@ Thumbs.db
 venv/
 env/
 .env
+*venv_gpu

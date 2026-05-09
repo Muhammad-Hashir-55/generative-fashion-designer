@@ -1,3 +1,12 @@
+---
+title: Generative Fashion Designer
+emoji: 🎨
+colorFrom: purple
+colorTo: cyan
+sdk: docker
+app_port: 7860
+---
+
 # 🎨 Generative Fashion Designer
 
 **Advanced Deep Neural Networks Project — Generative AI for Fashion Design**

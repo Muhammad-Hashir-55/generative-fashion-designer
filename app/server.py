@@ -364,13 +364,15 @@ def _mock_metrics() -> dict:
 # ─── Entry Point ────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 7860))
+
     print(f"\n{'='*60}")
     print(f"  Generative Fashion Designer — Web Server")
     print(f"{'='*60}")
     print(f"  Device : {device}")
     if torch.cuda.is_available():
         print(f"  GPU    : {torch.cuda.get_device_name(0)}")
-    print(f"  URL    : http://localhost:5000")
+    print(f"  URL    : http://localhost:{port}")
     print(f"{'='*60}\n")
 
     # Pre-warm VAE model
@@ -380,4 +382,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"  [!] VAE load failed: {e}")
 
-    app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
