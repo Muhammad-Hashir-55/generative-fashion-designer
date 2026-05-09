@@ -73,8 +73,12 @@ jobs:
         mkdir ../deploy_temp
         cp -r . ../deploy_temp
         cd ../deploy_temp
-        rm -rf .git
-        rm -rf data  # ABSOLUTELY ensure data is not pushed
+
+        # --- DEEP CLEAN: Remove all forbidden binaries and junk ---
+        rm -rf .git .venv .pytest_cache .vscode __pycache__
+        rm -rf data outputs/gallery outputs/logs
+        rm -f Project_Proposal.pdf
+        # ----------------------------------------------------------
 
         # Initialize fresh repo
         git init -b main
