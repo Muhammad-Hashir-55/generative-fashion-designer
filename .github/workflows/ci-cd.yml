@@ -56,9 +56,34 @@ jobs:
         fetch-depth: 0
         lfs: true
 
-    - name: Push to Hugging Face Spaces
+    - name: Install Git LFS
+      run: |
+        sudo apt-get install git-lfs
+        git lfs install
+
+    - name: Deploy to Hugging Face (Clean Push)
       env:
         HF_TOKEN: ${{ secrets.HF_TOKEN }}
       run: |
+        # Configure Git
+        git config --global user.email "bot@github.com"
+        git config --global user.name "GitHub Action"
+
+        # Create a temporary directory for a clean push
+        mkdir deploy_temp
+        cp -r . deploy_temp/
+        cd deploy_temp
+        rm -rf .git
+        rm -rf data  # ABSOLUTELY ensure data is not pushed
+        rm -rf deploy_temp # Don't copy yourself
+
+        # Initialize fresh repo
+        git init -b main
+        git lfs install
+        git lfs track "*.pt"
+        git add .
+        git commit -m "deploy: clean push $(date)"
+
+        # Force push to HF
         git remote add space https://user:${HF_TOKEN}@huggingface.co/spaces/HashirAwaiz/generative-fashion-designer
-        git push --force space HEAD:main
+        git push --force space main
