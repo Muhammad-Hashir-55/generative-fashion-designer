@@ -2,7 +2,7 @@
 title: Generative Fashion Designer
 emoji: 🎨
 colorFrom: purple
-colorTo: cyan
+colorTo: blue
 sdk: docker
 app_port: 7860
 ---
