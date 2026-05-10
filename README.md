@@ -35,6 +35,8 @@ Check out the interactive web application on Hugging Face Spaces:
 ---
 
 ## 📊 Dataset: DTD (Describable Textures Dataset)
+Source: **[VGG - Describable Textures Dataset (DTD)](https://www.robots.ox.ac.uk/~vgg/data/dtd/)**
+
 While many projects use simple icons, this project utilizes the **DTD dataset** to simulate real-world textile design. It contains 5,640 images across **47 categories** of patterns, such as:
 - **Textiles**: *knitted, woven, braided, pleated*
 - **Patterns**: *polka-dotted, paisley, chequered, striped*
