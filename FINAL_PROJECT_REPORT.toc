@@ -1,0 +1,34 @@
+\contentsline {chapter}{\numberline {1}Executive Summary}{5}{chapter.1}%
+\contentsline {chapter}{\numberline {2}Introduction \& Problem Statement}{6}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Background}{6}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Problem Statement}{6}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Objectives}{6}{section.2.3}%
+\contentsline {chapter}{\numberline {3}System Architecture}{8}{chapter.3}%
+\contentsline {section}{\numberline {3.1}High-Level Design}{8}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Component Description}{8}{section.3.2}%
+\contentsline {chapter}{\numberline {4}Project Rubrics Compliance Assessment}{10}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Rubric 1: Data Pipeline}{10}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Rubric 2: Model Architecture \& Training}{10}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Rubric 3: Code Organization \& Quality}{11}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Rubric 4: Infrastructure \& MLOps}{11}{section.4.4}%
+\contentsline {chapter}{\numberline {5}Data Engineering \& Pipeline}{13}{chapter.5}%
+\contentsline {section}{\numberline {5.1}The Describable Textures Dataset (DTD)}{13}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Data Preprocessing}{13}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Augmentation Strategies}{13}{section.5.3}%
+\contentsline {chapter}{\numberline {6}Generative Model Architectures}{14}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Variational Autoencoder (VAE)}{14}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Deep Convolutional GAN (DCGAN)}{14}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Wasserstein GAN with Gradient Penalty (WGAN-GP)}{15}{section.6.3}%
+\contentsline {section}{\numberline {6.4}Latent Diffusion Transformer (DiT)}{15}{section.6.4}%
+\contentsline {chapter}{\numberline {7}Training Methodology}{16}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Hyperparameter Configuration}{16}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Hardware Optimization}{16}{section.7.2}%
+\contentsline {chapter}{\numberline {8}Evaluation Metrics \& Results}{17}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Quantitative Evaluation}{17}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Results Comparison}{17}{section.8.2}%
+\contentsline {chapter}{\numberline {9}Code Infrastructure \& Deployment}{18}{chapter.9}%
+\contentsline {section}{\numberline {9.1}Inference Server (REST API)}{18}{section.9.1}%
+\contentsline {section}{\numberline {9.2}Continuous Integration (CI/CD)}{18}{section.9.2}%
+\contentsline {section}{\numberline {9.3}Monitoring}{18}{section.9.3}%
+\contentsline {chapter}{\numberline {10}Conclusion \& Future Work}{19}{chapter.10}%
+\contentsline {section}{\numberline {10.1}Future Directions}{19}{section.10.1}%
