@@ -34,6 +34,16 @@ Check out the interactive web application on Hugging Face Spaces:
 
 ---
 
+## 📊 Dataset: DTD (Describable Textures Dataset)
+While many projects use simple icons, this project utilizes the **DTD dataset** to simulate real-world textile design. It contains 5,640 images across **47 categories** of patterns, such as:
+- **Textiles**: *knitted, woven, braided, pleated*
+- **Patterns**: *polka-dotted, paisley, chequered, striped*
+- **Surfaces**: *marbled, cracked, porous, crystalline*
+
+The models are trained to synthesize these complex high-frequency patterns, enabling the generation of realistic fabric textures for fashion prototyping.
+
+---
+
 ## 🚀 Quick Start
 
 ### 1. GPU Environment (RTX 4050 Optimized)
