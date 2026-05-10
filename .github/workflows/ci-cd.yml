@@ -76,8 +76,8 @@ jobs:
 
         # --- DEEP CLEAN: Remove all forbidden binaries and junk ---
         rm -rf .git .venv .pytest_cache .vscode __pycache__
-        rm -rf data outputs/gallery outputs/logs
-        rm -f Project_Proposal.pdf Project_Report.pdf
+        rm -rf data outputs/gallery outputs/logs docs
+        find . -name "*.pdf" -type f -delete
         # ----------------------------------------------------------
 
         # Initialize fresh repo
