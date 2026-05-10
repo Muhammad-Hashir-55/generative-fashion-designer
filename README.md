@@ -11,216 +11,96 @@ app_port: 7860
 
 **Advanced Deep Neural Networks Project — Generative AI for Fashion Design**
 
-A production-grade, modular deep learning system implementing **6 advanced generative algorithms** trained on Fashion-MNIST, with comprehensive data pipelines, TensorBoard logging, quantitative evaluation metrics, and professional visualization.
+A production-grade, modular deep learning system implementing **6 advanced generative architectures**. This project features a full deployment pipeline to Hugging Face Spaces, GPU-optimized training, and cloud-based high-fidelity generation.
 
 ---
 
-## 🏗️ Architecture
-
-```
-generative-fashion-designer/
-├── config/default.yaml          # Central hyperparameter configuration
-├── src/
-│   ├── data/                    # Data pipeline (dataset, augmentation, dataloader)
-│   ├── models/                  # 6 model architectures
-│   │   ├── components.py        # Shared blocks (ResBlock, SelfAttention, SE, etc.)
-│   │   ├── vae.py               # β-Variational Autoencoder
-│   │   ├── dcgan.py             # Deep Convolutional GAN
-│   │   ├── wgan_gp.py           # Wasserstein GAN + Gradient Penalty
-│   │   ├── conditional_gan.py   # Class-Conditional GAN (Projection Discriminator)
-│   │   ├── style_transfer.py    # VGG-19 Neural Style Transfer
-│   │   └── fusion_generator.py  # CVAE-GAN Hybrid Fusion Model
-│   ├── training/                # Training engines with early stopping, schedulers
-│   ├── evaluation/              # FID, IS, SSIM metrics + visualization
-│   ├── inference/               # Unified generation & style mixing
-│   └── utils/                   # Config, logging, checkpointing
-├── scripts/                     # CLI entry points
-│   ├── train.py
-│   ├── evaluate.py
-│   ├── generate.py
-│   └── visualize_data.py
-└── outputs/                     # Generated during runtime
-    ├── checkpoints/
-    ├── logs/                    # TensorBoard event files
-    ├── generated/               # Sample images per epoch
-    └── evaluation/              # Metrics, reports, plots
-```
+## 🌐 Live Demo
+Check out the interactive web application on Hugging Face Spaces:  
+👉 **[Generative Fashion Designer on HF Spaces](https://huggingface.co/spaces/HashirAwaiz/generative-fashion-designer)**
 
 ---
 
 ## 🧠 Implemented Models
 
-| # | Model | Key Techniques | Reference |
+| # | Model | Key Techniques | Usage |
 |---|-------|---------------|-----------|
-| 1 | **β-VAE** | Residual encoder, KL annealing, reparameterization trick | Kingma & Welling, 2014 |
-| 2 | **DCGAN** | Spectral norm, self-attention, minibatch stddev, label smoothing | Radford et al., 2016 |
-| 3 | **WGAN-GP** | Gradient penalty (λ=10), 5:1 critic ratio, Wasserstein distance | Gulrajani et al., 2017 |
-| 4 | **Conditional GAN** | Projection discriminator, class embeddings | Miyato & Koyama, 2018 |
-| 5 | **Latent DiT** | Latent space Diffusion Transformer, DDPM | Peebles & Xie, 2022 |
-| 6 | **FLUX.2 Pro** | High quality Replicate API text-to-image generation | Black Forest Labs, 2024 |
-
-### Advanced Components Used Across Models
-- **Self-Attention Layers** (SA-GAN, Zhang et al., 2019)
-- **Squeeze-and-Excitation** channel attention (Hu et al., 2018)
-- **Spectral Normalization** for discriminator stability
-- **Minibatch Standard Deviation** for mode collapse detection
-- **Residual Blocks** with configurable normalization
-- **Gradient Penalty** for Lipschitz constraint enforcement
-
----
-
-## 📊 Dataset
-
-**Fashion-MNIST** — 70,000 grayscale images (28×28 → upscaled to 32×32)
-
-| Class | Samples |
-|-------|---------|
-| T-shirt/top | 7,000 |
-| Trouser | 7,000 |
-| Pullover | 7,000 |
-| Dress | 7,000 |
-| Coat | 7,000 |
-| Sandal | 7,000 |
-| Shirt | 7,000 |
-| Sneaker | 7,000 |
-| Bag | 7,000 |
-| Ankle boot | 7,000 |
-
-Auto-downloaded via `torchvision.datasets.FashionMNIST`.
+| 1 | **β-VAE** | Residual encoder, KL annealing, reparameterization trick | Local |
+| 2 | **DCGAN** | Spectral norm, self-attention, minibatch stddev | Local |
+| 3 | **WGAN-GP** | Gradient penalty (λ=10), Wasserstein distance | Local |
+| 4 | **Conditional GAN** | Projection discriminator, class embeddings | Local |
+| 5 | **Latent DiT** | Diffusion Transformer in latent space | Local |
+| 6 | **FLUX.2 Pro** | State-of-the-art cloud generation via Replicate | Cloud |
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Setup Environment (For FLUX.2 Pro API)
-Create a `.env` file in the root directory to enable the Replicate API for FLUX generation:
-```bash
-REPLICATE_API_TOKEN=your_replicate_token_here
+### 1. GPU Environment (RTX 4050 Optimized)
+To train models locally on your GPU, use the dedicated Python 3.12 environment:
+```powershell
+# Activate and install (if not done)
+.\venv_gpu\Scripts\activate
+pip install -r requirements.txt
+
+# Run training on GPU
+.\venv_gpu\Scripts\python.exe scripts/train.py --model vae --epochs 50 --mixed-precision
 ```
 
-### 2. Visualize the Dataset
+### 2. Cloud Generation (FLUX.2 Pro)
+Enable high-quality cloud generation by adding your Replicate token to a `.env` file:
 ```bash
-python scripts/visualize_data.py
+REPLICATE_API_TOKEN=your_token_here
 ```
 
-### 2. Train a Model
-```bash
-# Train VAE (50 epochs)
-python scripts/train.py --model vae --epochs 50
-
-# Fast multi-GPU VAE training with preflight readiness gate
-python scripts/train_lightning.py --epochs 50 --devices auto --precision 16-mixed
-
-# Preflight only (validates model/data and aborts if readiness gate fails)
-python scripts/train_lightning.py --preflight-only
-
-# Train DCGAN (80 epochs)
-python scripts/train.py --model dcgan --epochs 80
-
-# Train WGAN-GP
-python scripts/train.py --model wgan_gp --epochs 80
-
-# Train Conditional GAN
-python scripts/train.py --model cgan --epochs 80
-
-# Train Latent DiT
-python scripts/train.py --model latent_dit --epochs 100
-```
-
-### 3. Generate Samples
-```bash
-# Generate from VAE
-python scripts/generate.py --model vae --num 64
-
-# Generate specific class (cGAN)
-python scripts/generate.py --model cgan --class "Dress" --num 16
-
-# Latent space interpolation
-python scripts/generate.py --model vae --interpolate --steps 10
-```
-
-### 4. Evaluate Models
-```bash
-# Evaluate single model
-python scripts/evaluate.py --model vae --num-samples 100
-
-# Evaluate all trained models
-python scripts/evaluate.py --all --num-samples 100
-```
-
-### 5. Monitor Training (TensorBoard)
-```bash
-tensorboard --logdir outputs/logs
+### 3. Training All Models
+We have a convenient script to train the entire suite sequentially:
+```powershell
+.\venv_gpu\Scripts\python.exe scripts/train_all_models.py
 ```
 
 ---
 
-## ⚙️ Configuration
+## 🏗️ Architecture & Infrastructure
 
-All hyperparameters are centralized in `config/default.yaml`:
+- **Web App**: Flask-based server served via Docker.
+- **CI/CD**: Automated GitHub Actions pipeline that lints, tests, and deploys to Hugging Face.
+- **Git LFS**: Large model weights (`.pt`) are tracked via Git LFS for seamless deployment.
+- **Design**: Premium glassmorphic UI with real-time generation previews.
 
-```yaml
-models:
-  latent_dim: 128
-  vae:
-    beta: 1.0
-    beta_anneal_epochs: 10
-  wgan_gp:
-    lambda_gp: 10.0
-    n_critic: 5
+---
 
-training:
-  optimizer:
-    lr: 2.0e-4
-    betas: [0.5, 0.999]
-  gradient_clip: 1.0
-  early_stopping:
-    patience: 15
+## ⚙️ Project Structure
 ```
-
-Override from CLI:
-```bash
-python scripts/train.py --model vae --lr 0.001 --batch-size 256 --epochs 100
+generative-fashion-designer/
+├── app/                         # Flask Backend & Frontend Assets
+├── src/
+│   ├── models/                  # VAE, GAN, WGAN, cGAN, DiT, Fusion
+│   ├── training/                # Custom training engines
+│   ├── inference/               # Unified generation & Cloud API
+│   └── data/                    # Dataset & augmentation pipelines
+├── .github/workflows/           # Automated CI/CD (Lint -> Test -> Deploy)
+├── Dockerfile                   # Deployment container config
+└── scripts/                     # CLI tools for training & evaluation
 ```
 
 ---
 
-## 📈 Evaluation Metrics
-
-| Metric | What it Measures | Better |
-|--------|-----------------|--------|
-| **FID** (Fréchet Inception Distance) | Distributional similarity to real data | Lower ↓ |
-| **IS** (Inception Score) | Image quality + diversity | Higher ↑ |
-| **SSIM** (Structural Similarity) | Perceptual reconstruction quality | Higher ↑ |
-
----
-
-## 🛠️ Tech Stack
-
-- **PyTorch 2.x** + TorchVision
-- **TensorBoard** for experiment tracking
-- **scikit-learn** for t-SNE latent visualization
-- **Matplotlib** + Seaborn for publication-quality plots
-- **CUDA** (RTX 4050 optimized) with CPU fallback
+## 📈 Tech Stack
+- **PyTorch 2.x** (CUDA 12.1)
+- **Hugging Face Spaces** (Docker SDK)
+- **Replicate SDK** (FLUX.2 Pro)
+- **GitHub Actions** (CI/CD)
+- **Git LFS** (Model Versioning)
 
 ---
 
-## 📁 Project Structure Details
+## 📁 Evaluation Metrics
+We implement manual versions of standard metrics to evaluate fashion generation:
+- **FID** (Fréchet Inception Distance)
+- **IS** (Inception Score)
+- **SSIM** (Structural Similarity)
 
-### Data Pipeline (`src/data/`)
-- Stratified train/val/test splits preserving class balance
-- 4 augmentation pipelines: Train, Eval, GAN, StyleTransfer
-- Configurable DataLoader factory with pin_memory + multi-worker
+---
 
-### Training Infrastructure (`src/training/`)
-- Abstract `BaseTrainer` with early stopping, gradient clipping
-- TensorBoard scalar/image/histogram logging
-- Automatic checkpoint management (best + top-K periodic)
-- CosineAnnealingWarmRestarts + LinearWarmupCosineDecay schedulers
-
-### Evaluation (`src/evaluation/`)
-- Manual FID implementation (eigendecomposition — no external deps)
-- Inception Score with configurable splits
-- SSIM with Gaussian windowing
-- Markdown comparison reports across all models
-
+Created by **Hashir Awaiz** as part of an Advanced Deep Neural Networks study.
