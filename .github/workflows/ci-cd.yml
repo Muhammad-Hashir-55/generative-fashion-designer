@@ -76,7 +76,8 @@ jobs:
 
         # --- DEEP CLEAN: Remove all forbidden binaries and junk ---
         rm -rf .git .venv .pytest_cache .vscode __pycache__
-        rm -rf data outputs/gallery outputs/logs docs
+        # Keep outputs/gallery so seeded PNG/JPEG assets remain visible on HF Spaces.
+        rm -rf data outputs/logs docs
         find . -name "*.pdf" -type f -delete
         # ----------------------------------------------------------
 

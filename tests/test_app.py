@@ -64,3 +64,13 @@ def test_no_secrets_in_codebase():
                 assert "sk-" not in content, f"Possible API key found in {fname}"
                 assert "REPLICATE_API_TOKEN =" not in content or "os.getenv" in content, \
                     f"Hardcoded token in {fname}"
+
+
+def test_hf_deploy_keeps_gallery_assets():
+    """Deployment workflow should preserve tracked gallery images for HF Spaces."""
+    workflow_path = os.path.join(PROJECT_ROOT, ".github", "workflows", "ci-cd.yml")
+    with open(workflow_path, encoding="utf-8") as f:
+        content = f.read()
+
+    assert "rm -rf data outputs/logs docs" in content
+    assert "rm -rf data outputs/gallery outputs/logs docs" not in content
