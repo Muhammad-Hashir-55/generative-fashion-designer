@@ -257,7 +257,9 @@ def interpolate():
 def gallery():
     """Return list of previously generated images."""
     items = []
-    for p in sorted(GALLERY_DIR.glob("*.png"), key=lambda f: f.stat().st_mtime, reverse=True)[:50]:
+    # Glob for both PNG and JPEG files
+    image_files = list(GALLERY_DIR.glob("*.png")) + list(GALLERY_DIR.glob("*.jpg")) + list(GALLERY_DIR.glob("*.jpeg"))
+    for p in sorted(image_files, key=lambda f: f.stat().st_mtime, reverse=True)[:50]:
         parts = p.stem.split("_")
         model = parts[0] if parts else "unknown"
         ts = int(parts[-1]) if parts[-1].isdigit() else 0
@@ -300,10 +302,12 @@ def gallery_image(filename: str):
         abort(404)
 
     img = Image.open(path)
+    # Determine output format based on file extension
+    output_format = "JPEG" if filename.lower().endswith((".jpg", ".jpeg")) else "PNG"
     buf = io.BytesIO()
-    img.save(buf, format="PNG")
+    img.save(buf, format=output_format)
     b64 = base64.b64encode(buf.getvalue()).decode()
-    return jsonify({"b64": b64, "filename": filename})
+    return jsonify({"b64": b64, "filename": filename, "format": output_format})
 
 
 @app.route("/api/metrics")
