@@ -422,11 +422,36 @@ def _model_description(m: str) -> str:
 def _mock_metrics() -> dict:
     """Placeholder metrics for UI display when no evaluation has been run."""
     return {
-        "vae": {"fid": 142.3, "is_mean": 2.1, "is_std": 0.3, "recon_mse": 0.031},
-        "dcgan": {"fid": 178.6, "is_mean": 1.9, "is_std": 0.4},
-        "wgan_gp": {"fid": 165.2, "is_mean": 2.0, "is_std": 0.35, "w_dist": -12.4},
-        "cgan": {"fid": 155.4, "is_mean": 2.2, "is_std": 0.28},
-        "latent_dit": {"fid": 84.2, "is_mean": 3.1, "is_std": 0.42},
+        "vae": {
+            "fid": 42.51,
+            "inception_score": 3.20,
+            "training_time_hrs": 1.5,
+        },
+        "dcgan": {
+            "fid": 38.24,
+            "inception_score": 4.10,
+            "training_time_hrs": 2.0,
+        },
+        "wgan_gp": {
+            "fid": 35.70,
+            "inception_score": 4.52,
+            "training_time_hrs": 2.2,
+        },
+        "cgan": {
+            "fid": 37.45,
+            "inception_score": 4.35,
+            "training_time_hrs": 2.1,
+        },
+        "latent_dit": {
+            "fid": 32.10,
+            "inception_score": 4.88,
+            "training_time_hrs": 2.5,
+        },
+        "fusion": {
+            "fid": 34.82,
+            "inception_score": 4.61,
+            "training_time_hrs": 2.3,
+        },
     }
 
 
