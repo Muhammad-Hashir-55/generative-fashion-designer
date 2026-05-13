@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import io
+import json
 import random
 from pathlib import Path
 
@@ -116,18 +117,36 @@ class PickupImageGenerator:
             return entries
 
         if self.manifest_path.exists():
-            import json
+            self._entries_cache = self._load_entries_from_manifest(self.manifest_path)
+            return self._entries_cache
 
-            try:
-                with open(self.manifest_path, encoding="utf-8") as fp:
-                    payload = json.load(fp)
-                self._entries_cache = list(payload.get("images", []))
-            except Exception:
-                self._entries_cache = []
+        chunk_entries = self._load_entries_from_chunked_manifests()
+        if chunk_entries:
+            self._entries_cache = chunk_entries
             return self._entries_cache
 
         self._entries_cache = []
         return self._entries_cache
+
+    def _load_entries_from_manifest(self, manifest_path: Path) -> list[dict]:
+        try:
+            with open(manifest_path, encoding="utf-8") as fp:
+                payload = json.load(fp)
+            return list(payload.get("images", []))
+        except Exception:
+            return []
+
+    def _load_entries_from_chunked_manifests(self) -> list[dict]:
+        chunk_paths = sorted(
+            path for path in self.manifest_path.parent.glob(
+                f"{self.manifest_path.stem}.*{self.manifest_path.suffix}"
+            )
+            if path.is_file() and path.stem.startswith(f"{self.manifest_path.stem}.")
+        )
+        entries: list[dict] = []
+        for chunk_path in chunk_paths:
+            entries.extend(self._load_entries_from_manifest(chunk_path))
+        return entries
 
     def _open_image(self, entry: dict) -> Image.Image:
         if entry.get("path"):

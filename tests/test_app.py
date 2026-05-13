@@ -5,6 +5,9 @@ All tests are self-contained and only use the standard library.
 
 import os
 import sys
+import json
+import tempfile
+import importlib.util
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -91,6 +94,40 @@ def test_pickup_manifest_script_exists():
     assert os.path.isfile(manifest_script), "Pickup manifest builder is missing"
 
 
+def test_pickup_manifest_script_chunks_large_outputs():
+    """Pickup preview packer should split large manifests into HF-safe chunks."""
+    manifest_script = os.path.join(PROJECT_ROOT, "scripts", "build_pickup_manifest.py")
+    spec = importlib.util.spec_from_file_location("build_pickup_manifest", manifest_script)
+    module = importlib.util.module_from_spec(spec)
+    assert spec is not None and spec.loader is not None
+    spec.loader.exec_module(module)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        source_dir = module.Path(tmpdir) / "pickup"
+        source_dir.mkdir()
+        for idx in range(4):
+            (source_dir / f"dress_{idx}.jpg").write_bytes(b"x" * 1024)
+
+        items = module.build_manifest(source_dir)
+        output_path = module.Path(tmpdir) / "pickup_seed_manifest.json"
+        written_paths = module.write_manifest_files(items, output_path, max_bytes=2200)
+
+        assert len(written_paths) > 1
+        assert not output_path.exists()
+
+        total_images = 0
+        for idx, path in enumerate(written_paths, start=1):
+            assert path.name.endswith(".json")
+            assert path.stat().st_size <= 2200
+            with open(path, encoding="utf-8") as f:
+                payload = json.load(f)
+            assert payload["chunk_index"] == idx
+            assert payload["chunk_count"] == len(written_paths)
+            total_images += len(payload["images"])
+
+        assert total_images == len(items)
+
+
 def test_server_py_has_seed_gallery_fallback():
     """Server should support gallery + pickup JSON fallback when binaries are absent."""
     with open(os.path.join(PROJECT_ROOT, "app", "server.py"), encoding="utf-8") as f:
@@ -99,3 +136,12 @@ def test_server_py_has_seed_gallery_fallback():
     assert "_load_seed_gallery" in content
     assert "pickup_seed_manifest.json" in content
     assert "PickupImageGenerator" in content
+
+
+def test_pickup_generator_supports_chunked_seed_manifests():
+    """Pickup generator should reassemble chunked seed manifests during deploy."""
+    generator_path = os.path.join(PROJECT_ROOT, "src", "inference", "pickup_generator.py")
+    with open(generator_path, encoding="utf-8") as f:
+        content = f.read()
+    assert "_load_entries_from_chunked_manifests" in content
+    assert "self.manifest_path.parent.glob" in content
