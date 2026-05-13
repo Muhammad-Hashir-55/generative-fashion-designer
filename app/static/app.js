@@ -285,10 +285,20 @@ async function loadMetrics() {
 function renderMetrics(metrics) {
   const grid = document.getElementById('metricsGrid');
   const modelNames = { vae:'β-VAE', dcgan:'DCGAN', wgan_gp:'WGAN-GP', cgan:'cGAN', latent_dit:'Latent DiT' };
+  const keyLabels = {
+    fid: 'FID Score',
+    inception_score: 'Inception Score',
+    training_time_hrs: 'Training Time (hrs)',
+    is_mean: 'Inception Score',
+    is_std: 'IS Std',
+    w_dist: 'Wasserstein Distance',
+    recon_mse: 'Recon MSE'
+  };
+  modelNames.fusion = 'CVAE-GAN Fusion';
   let html = '';
   for (const [modelId, vals] of Object.entries(metrics)) {
     const rows = Object.entries(vals).map(([k,v]) =>
-      `<div class="metric-row"><span class="metric-key">${k.toUpperCase().replace('_',' ')}</span><span class="metric-val">${typeof v === 'number' ? v.toFixed(2) : v}</span></div>`
+      `<div class="metric-row"><span class="metric-key">${keyLabels[k] || k.toUpperCase().replaceAll('_',' ')}</span><span class="metric-val">${typeof v === 'number' ? v.toFixed(2) : v}</span></div>`
     ).join('');
     html += `<div class="metric-card">
       <div class="metric-model">${modelId}</div>
@@ -353,10 +363,13 @@ function renderGallery() {
       .then(d => {
         const el = grid.children[idx];
         if (!el || !d.b64) return;
+        // Determine MIME type based on filename or returned format
+        const format = d.format || (item.filename.toLowerCase().endsWith(('.jpg', '.jpeg')) ? 'JPEG' : 'PNG');
+        const mimeType = format === 'JPEG' ? 'image/jpeg' : 'image/png';
         const imgWrap = el.querySelector('div');
         imgWrap.innerHTML = '';
         const img = document.createElement('img');
-        img.src = `data:image/png;base64,${d.b64}`;
+        img.src = `data:${mimeType};base64,${d.b64}`;
         img.style.cssText = 'width:100%;height:160px;object-fit:cover;display:block;transition:transform 0.3s';
         imgWrap.appendChild(img);
       })
@@ -368,7 +381,13 @@ async function openGalleryItem(filename, model) {
   try {
     const r = await fetch(`${API}/api/gallery/image/${filename}`);
     const d = await r.json();
-    if (d.b64) openLightbox(`data:image/png;base64,${d.b64}`, `${model.toUpperCase()} · ${filename}`);
+    if (d.b64) {
+      // Determine MIME type based on filename or returned format
+      const format = d.format || (filename.toLowerCase().endsWith(('.jpg', '.jpeg')) ? 'JPEG' : 'PNG');
+      const mimeType = format === 'JPEG' ? 'image/jpeg' : 'image/png';
+      const src = `data:${mimeType};base64,${d.b64}`;
+      openLightbox(src, `${model.toUpperCase()} · ${filename}`);
+    }
   } catch(e) {}
 }
 
