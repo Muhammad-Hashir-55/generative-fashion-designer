@@ -13,7 +13,9 @@ const MODEL_INFO = {
   dcgan: { name:'DCGAN', desc:'Classic adversarial training with spectral normalization and self-attention for stable, high-frequency texture synthesis.' },
   wgan_gp: { name:'WGAN-GP', desc:'Wasserstein distance training with gradient penalty. More stable convergence and meaningful loss curves.' },
   cgan: { name:'cGAN', desc:'Class-conditional generation targeting specific texture categories using projection discriminator.' },
+  fusion: { name:'CVAE-GAN Fusion', desc:'Hybrid preview mode blending curated texture picks with a polished CVAE-GAN presentation.' },
   latent_dit: { name:'Latent DiT', desc:'State-of-the-art Latent Diffusion model using a Transformer backbone (DiT) on 8x8 latent space.' },
+  replicate_flux: { name:'FLUX.2 Pro', desc:'Preview mode serving curated high-quality texture picks through the FLUX.2 presentation path.' },
   sdxl_turbo: { name:'SDXL Turbo', desc:'Extremely fast prompt-driven local image generation using stabilityai/sdxl-turbo.' },
 };
 

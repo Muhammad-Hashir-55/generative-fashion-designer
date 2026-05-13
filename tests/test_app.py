@@ -67,14 +67,16 @@ def test_no_secrets_in_codebase():
 
 
 def test_hf_deploy_keeps_gallery_assets():
-    """Deployment workflow should prepackage gallery assets for HF Spaces."""
+    """Deployment workflow should prepackage demo image assets for HF Spaces."""
     workflow_path = os.path.join(PROJECT_ROOT, ".github", "workflows", "ci-cd.yml")
     with open(workflow_path, encoding="utf-8") as f:
         content = f.read()
 
     assert "scripts/build_gallery_manifest.py" in content
     assert "app/gallery_seed_manifest.json" in content
-    assert "rm -rf data outputs/gallery outputs/logs docs" in content
+    assert "scripts/build_pickup_manifest.py" in content
+    assert "app/pickup_seed_manifest.json" in content
+    assert "rm -rf data outputs/gallery outputs/pickup-pictures outputs/logs docs" in content
 
 
 def test_gallery_manifest_script_exists():
@@ -83,9 +85,17 @@ def test_gallery_manifest_script_exists():
     assert os.path.isfile(manifest_script), "Gallery manifest builder is missing"
 
 
+def test_pickup_manifest_script_exists():
+    """Pickup preview packaging helper should exist for deployment."""
+    manifest_script = os.path.join(PROJECT_ROOT, "scripts", "build_pickup_manifest.py")
+    assert os.path.isfile(manifest_script), "Pickup manifest builder is missing"
+
+
 def test_server_py_has_seed_gallery_fallback():
-    """Server should support gallery JSON fallback when binaries are absent."""
+    """Server should support gallery + pickup JSON fallback when binaries are absent."""
     with open(os.path.join(PROJECT_ROOT, "app", "server.py"), encoding="utf-8") as f:
         content = f.read()
     assert "gallery_seed_manifest.json" in content
     assert "_load_seed_gallery" in content
+    assert "pickup_seed_manifest.json" in content
+    assert "PickupImageGenerator" in content

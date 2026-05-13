@@ -43,6 +43,7 @@ from PIL import Image
 # Import only what we need — bypass src/__init__ to avoid tensorboard/TF protobuf conflict
 from src.utils.config import load_config
 from src.inference.generator import FashionGenerator
+from src.inference.pickup_generator import PickupImageGenerator
 from src.inference.replicate_generator import (
     default_replicate_prompt,
     generate_replicate_image,
@@ -62,11 +63,17 @@ CHECKPOINT_DIR = PROJECT_ROOT / "outputs" / "checkpoints"
 GENERATED_DIR = PROJECT_ROOT / "outputs" / "generated"
 GALLERY_DIR = PROJECT_ROOT / "outputs" / "gallery"
 GALLERY_MANIFEST_PATH = PROJECT_ROOT / "app" / "gallery_seed_manifest.json"
+PICKUP_PICTURES_DIR = PROJECT_ROOT / "outputs" / "pickup-pictures"
+PICKUP_MANIFEST_PATH = PROJECT_ROOT / "app" / "pickup_seed_manifest.json"
 GALLERY_DIR.mkdir(parents=True, exist_ok=True)
 
-AVAILABLE_MODELS = ["vae", "dcgan", "wgan_gp", "cgan", "latent_dit", "replicate_flux"]  # fusion excluded (unstable)
+AVAILABLE_MODELS = ["vae", "dcgan", "wgan_gp", "cgan", "fusion", "latent_dit", "replicate_flux"]
 _generators: dict[str, FashionGenerator] = {}
 _seed_gallery_cache: dict[str, dict] | None = None
+PICKUP_GENERATOR = PickupImageGenerator(
+    source_dir=PICKUP_PICTURES_DIR,
+    manifest_path=PICKUP_MANIFEST_PATH,
+)
 
 
 def _get_generator(model_type: str) -> FashionGenerator:
@@ -158,6 +165,7 @@ def health():
 def get_models():
     """Return list of models and their checkpoint availability."""
     models = []
+    pickup_available = PICKUP_GENERATOR.available()
     for m in AVAILABLE_MODELS:
         if m == "replicate_flux":
             models.append({
@@ -175,7 +183,7 @@ def get_models():
         models.append({
             "id": m,
             "name": _model_display_name(m),
-            "available": ckpt.exists(),
+            "available": pickup_available or ckpt.exists(),
             "checkpoint": str(ckpt) if ckpt.exists() else None,
             "size_mb": size_mb,
             "description": _model_description(m),
@@ -186,9 +194,10 @@ def get_models():
 @app.route("/api/classes")
 def get_classes():
     """Return list of texture classes."""
+    pickup_classes = PICKUP_GENERATOR.available_classes()
     return jsonify({
-        "classes": DTD_CLASSES,
-        "total": len(DTD_CLASSES)
+        "classes": pickup_classes or DTD_CLASSES,
+        "total": len(pickup_classes or DTD_CLASSES)
     })
 
 
@@ -205,6 +214,36 @@ def generate():
         return jsonify({"error": f"Unknown model '{model_type}'"}), 400
 
     try:
+        if PICKUP_GENERATOR.available():
+            images, pickup_meta = PICKUP_GENERATOR.generate(
+                model_type=model_type,
+                num_samples=num_samples,
+                class_label=class_label,
+            )
+
+            effective_samples = int(pickup_meta.get("num_samples", images.size(0)))
+            nrow = max(1, min(8, int((images.size(0) - 1) ** 0.5) + 1))
+            b64 = _tensor_to_b64(images, nrow=nrow)
+
+            ts = int(time.time())
+            gallery_path = GALLERY_DIR / f"{model_type}_{ts}.png"
+            grid = vutils.make_grid(images, nrow=nrow, normalize=True, padding=2)
+            vutils.save_image(grid, gallery_path)
+
+            response = {
+                "b64": b64,
+                "model": model_type,
+                "num_samples": effective_samples,
+                "class_label": pickup_meta.get("resolved_class_label"),
+                "prompt": prompt or None,
+                "provider_model": "pickup_pictures",
+                "timestamp": ts,
+                "gallery_id": f"{model_type}_{ts}",
+                "preview_mode": True,
+                "source_filenames": pickup_meta.get("filenames", []),
+            }
+            return jsonify(response)
+
         if model_type == "replicate_flux":
             if not prompt:
                 prompt = default_replicate_prompt()
