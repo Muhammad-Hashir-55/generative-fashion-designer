@@ -67,10 +67,25 @@ def test_no_secrets_in_codebase():
 
 
 def test_hf_deploy_keeps_gallery_assets():
-    """Deployment workflow should preserve tracked gallery images for HF Spaces."""
+    """Deployment workflow should prepackage gallery assets for HF Spaces."""
     workflow_path = os.path.join(PROJECT_ROOT, ".github", "workflows", "ci-cd.yml")
     with open(workflow_path, encoding="utf-8") as f:
         content = f.read()
 
-    assert "rm -rf data outputs/logs docs" in content
-    assert "rm -rf data outputs/gallery outputs/logs docs" not in content
+    assert "scripts/build_gallery_manifest.py" in content
+    assert "app/gallery_seed_manifest.json" in content
+    assert "rm -rf data outputs/gallery outputs/logs docs" in content
+
+
+def test_gallery_manifest_script_exists():
+    """Gallery packaging helper should exist for deployment."""
+    manifest_script = os.path.join(PROJECT_ROOT, "scripts", "build_gallery_manifest.py")
+    assert os.path.isfile(manifest_script), "Gallery manifest builder is missing"
+
+
+def test_server_py_has_seed_gallery_fallback():
+    """Server should support gallery JSON fallback when binaries are absent."""
+    with open(os.path.join(PROJECT_ROOT, "app", "server.py"), encoding="utf-8") as f:
+        content = f.read()
+    assert "gallery_seed_manifest.json" in content
+    assert "_load_seed_gallery" in content

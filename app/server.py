@@ -61,10 +61,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CHECKPOINT_DIR = PROJECT_ROOT / "outputs" / "checkpoints"
 GENERATED_DIR = PROJECT_ROOT / "outputs" / "generated"
 GALLERY_DIR = PROJECT_ROOT / "outputs" / "gallery"
+GALLERY_MANIFEST_PATH = PROJECT_ROOT / "app" / "gallery_seed_manifest.json"
 GALLERY_DIR.mkdir(parents=True, exist_ok=True)
 
 AVAILABLE_MODELS = ["vae", "dcgan", "wgan_gp", "cgan", "latent_dit", "replicate_flux"]  # fusion excluded (unstable)
 _generators: dict[str, FashionGenerator] = {}
+_seed_gallery_cache: dict[str, dict] | None = None
 
 
 def _get_generator(model_type: str) -> FashionGenerator:
@@ -96,6 +98,42 @@ def _pil_to_b64(img: Image.Image) -> str:
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return base64.b64encode(buf.getvalue()).decode()
+
+
+def _gallery_model_and_timestamp_from_stem(stem: str, fallback_timestamp: int = 0) -> tuple[str, int]:
+    """Infer model name and timestamp from filenames like model_1234567890."""
+    parts = stem.split("_")
+    if len(parts) > 1 and parts[-1].isdigit():
+        return "_".join(parts[:-1]), int(parts[-1])
+    return (parts[0] if parts else "unknown"), fallback_timestamp
+
+
+def _load_seed_gallery() -> dict[str, dict]:
+    """Load deploy-time gallery data packaged as JSON text.
+
+    Hugging Face Spaces can reject raw image binaries in clean deployment pushes,
+    so the deploy workflow can prepackage gallery assets into a manifest that we
+    serve as an API fallback when the files are absent on disk.
+    """
+    global _seed_gallery_cache
+    if _seed_gallery_cache is not None:
+        return _seed_gallery_cache
+
+    if not GALLERY_MANIFEST_PATH.exists():
+        _seed_gallery_cache = {}
+        return _seed_gallery_cache
+
+    try:
+        with open(GALLERY_MANIFEST_PATH, encoding="utf-8") as fp:
+            payload = json.load(fp)
+        entries = payload.get("gallery", [])
+        _seed_gallery_cache = {
+            item["filename"]: item for item in entries
+            if isinstance(item, dict) and item.get("filename")
+        }
+    except Exception:
+        _seed_gallery_cache = {}
+    return _seed_gallery_cache
 
 
 # ─── Routes ─────────────────────────────────────────────────────────────────
@@ -256,32 +294,49 @@ def interpolate():
 @app.route("/api/gallery")
 def gallery():
     """Return list of previously generated images."""
-    items = []
+    items_by_id: dict[str, dict] = {}
+
+    for item in _load_seed_gallery().values():
+        item_id = item.get("id")
+        if item_id:
+            items_by_id[item_id] = {
+                "id": item_id,
+                "model": item.get("model", "unknown"),
+                "timestamp": int(item.get("timestamp", 0)),
+                "filename": item["filename"],
+            }
+
     # Glob for both PNG and JPEG files
-    image_files = list(GALLERY_DIR.glob("*.png")) + list(GALLERY_DIR.glob("*.jpg")) + list(GALLERY_DIR.glob("*.jpeg"))
+    image_files = (
+        list(GALLERY_DIR.glob("*.png")) +
+        list(GALLERY_DIR.glob("*.jpg")) +
+        list(GALLERY_DIR.glob("*.jpeg")) +
+        list(GALLERY_DIR.glob("*.webp"))
+    )
     for p in sorted(image_files, key=lambda f: f.stat().st_mtime, reverse=True)[:50]:
-        parts = p.stem.split("_")
-        model = parts[0] if parts else "unknown"
-        ts = int(parts[-1]) if parts[-1].isdigit() else 0
-        items.append({
+        fallback_ts = int(p.stat().st_mtime)
+        model, ts = _gallery_model_and_timestamp_from_stem(p.stem, fallback_timestamp=fallback_ts)
+        items_by_id[p.stem] = {
             "id": p.stem,
             "model": model,
             "timestamp": ts,
             "filename": p.name,
-        })
+        }
 
     # Also include training samples
-    for model_dir in GENERATED_DIR.iterdir():
-        if model_dir.is_dir():
-            for img_path in sorted(model_dir.glob("*.png"))[-3:]:
-                items.append({
-                    "id": img_path.stem,
-                    "model": model_dir.name,
-                    "timestamp": int(img_path.stat().st_mtime),
-                    "filename": img_path.name,
-                    "training_sample": True,
-                })
+    if GENERATED_DIR.exists():
+        for model_dir in GENERATED_DIR.iterdir():
+            if model_dir.is_dir():
+                for img_path in sorted(model_dir.glob("*.png"))[-3:]:
+                    items_by_id[img_path.stem] = {
+                        "id": img_path.stem,
+                        "model": model_dir.name,
+                        "timestamp": int(img_path.stat().st_mtime),
+                        "filename": img_path.name,
+                        "training_sample": True,
+                    }
 
+    items = sorted(items_by_id.values(), key=lambda item: item.get("timestamp", 0), reverse=True)
     return jsonify({"gallery": items[:60]})
 
 
@@ -298,16 +353,26 @@ def gallery_image(filename: str):
                 path = candidate
                 break
 
-    if not path.exists():
-        abort(404)
+    if path.exists():
+        img = Image.open(path)
+        # Determine output format based on file extension
+        output_format = "JPEG" if filename.lower().endswith((".jpg", ".jpeg")) else "PNG"
+        if filename.lower().endswith(".webp"):
+            output_format = "WEBP"
+        buf = io.BytesIO()
+        img.save(buf, format=output_format)
+        b64 = base64.b64encode(buf.getvalue()).decode()
+        return jsonify({"b64": b64, "filename": filename, "format": output_format})
 
-    img = Image.open(path)
-    # Determine output format based on file extension
-    output_format = "JPEG" if filename.lower().endswith((".jpg", ".jpeg")) else "PNG"
-    buf = io.BytesIO()
-    img.save(buf, format=output_format)
-    b64 = base64.b64encode(buf.getvalue()).decode()
-    return jsonify({"b64": b64, "filename": filename, "format": output_format})
+    seeded = _load_seed_gallery().get(filename)
+    if seeded and seeded.get("b64"):
+        return jsonify({
+            "b64": seeded["b64"],
+            "filename": filename,
+            "format": seeded.get("format", "PNG"),
+        })
+
+    abort(404)
 
 
 @app.route("/api/metrics")
